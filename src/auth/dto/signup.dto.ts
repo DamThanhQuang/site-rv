@@ -1,8 +1,9 @@
 import {
   IsEmail,
   IsNotEmpty,
-  IsStrongPassword,
   MaxLength,
+  IsString,
+  MinLength,
 } from 'class-validator';
 import { Role } from '../enums/role.enum';
 
@@ -24,8 +25,9 @@ export class SignupDto {
   @MaxLength(50)
   username: string;
 
+  @IsString()
   @IsNotEmpty()
-  //@IsStrongPassword() // Password phải đủ độ mạnh
+  @MinLength(6)
   password: string;
 
   @IsNotEmpty()

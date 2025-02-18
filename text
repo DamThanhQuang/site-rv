@@ -1,0 +1,23 @@
+1. Cài đặt thư viện cần thiết
+**npm install @nestjs/passport passport passport-local passport-jwt @nestjs/jwt bcrypt
+
+2. Cấu hình đăng nhập bằng email/password (Local Strategy)
+ Bước 1: Tạo AuthService để xử lý logic xác thực
+-Tìm user theo email trong database.
+-So sánh password nhập vào với password đã mã hóa (bcrypt).
+-Nếu đúng, trả về thông tin user (trừ password).
+ Bước 2: Tạo LocalStrategy
+-Nhận email/password từ request.
+-Gọi AuthService.validateUser().
+-Nếu sai, trả về lỗi UnauthorizedException.
+
+ Bước 3: Tạo AuthController để xử lý API đăng nhập
+-Sử dụng AuthGuard('local') để xác thực user.
+-Nếu đúng, Passport tự động gán thông tin user vào req.user.
+
+3. Cấu hình JWT (Token-based Authentication)
+ Bước 1: Cấu hình AuthModule
+-Đăng ký JwtModule để tạo token.
+-Đặt thời gian hết hạn (expiresIn).
+ Bước 2: Tạo JWT Token trong AuthService
+ 

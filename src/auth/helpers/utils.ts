@@ -1,15 +1,18 @@
-import * as bcrypt from 'bcryptjs';
-
+import * as bcrypt from 'bcrypt';
 import { BadRequestException } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { UserDocument } from '../../user/schemas/user.schema';
 
 export class PasswordHelper {
-  static async hashPassword(password: string) {
-    return await bcrypt.hash(password, 10);
+  static async hashPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt(10);
+    return bcrypt.hash(password, salt);
   }
 
-  static async comparePassword(password: string, hashedPassword: string) {
+  static async comparePassword(password: string, hashedPassword: string): Promise<boolean> {
+    if (!password || !hashedPassword) {
+      return false;
+    }
     return await bcrypt.compare(password, hashedPassword);
   }
 }

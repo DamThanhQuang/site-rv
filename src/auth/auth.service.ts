@@ -6,13 +6,21 @@ import { Model } from 'mongoose';
 import { Login } from './dto/login.dto';
 import { PasswordHelper } from './helpers/utils';
 import { EmailHelper } from './helpers/utils';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private jwtService: JwtService
+  ) { }
 
   async signup(signupDto: SignupDto): Promise<User> {
     const { firstname, lastname, email, password, role } = signupDto;
+
+    if (!password || typeof password !== 'string') {
+      throw new BadRequestException('Password không hợp lệ');
+    }
 
     // Kiểm tra email trùng lặp
     await EmailHelper.checkDuplicateEmail(email, this.userModel);
@@ -29,40 +37,46 @@ export class AuthService {
     return newUser.save();
   }
 
-  async login(login: Login): Promise<User> {
+  async login(login: Login): Promise<any> {
     const { email, password } = login;
-    const checkEmail = await this.userModel.findOne({ email });
-    if (!checkEmail) {
+    const user = await this.userModel.findOne({ email });
+    if (!user) {
       throw new BadRequestException('User not found!');
     }
     const isPasswordValid = await PasswordHelper.comparePassword(
       password,
-      checkEmail.password,
+      user.password,
     );
 
     if (!isPasswordValid) {
       throw new BadRequestException('Invalid password!');
     }
 
-    return checkEmail;
+    // Tạo JWT token
+    const payload = { email: user.email, sub: user._id };
+    return {
+      user,
+      access_token: this.jwtService.sign(payload),
+    };
   }
-  async validateUser(login: Login): Promise<User | null> {
-    const { email, password } = login;
-    const user = await this.userModel.findOne({ email });
-    
-    if (!user) {
-        return null;
-    }
-    
-    const isPasswordValid = await PasswordHelper.comparePassword(
-        password,
-        user.password,
-    );
 
-    if (!isPasswordValid) {
-        return null;
+  async validateUser(email: string, password: string): Promise<any> {
+    // Tìm user theo email trong db 
+    const user = await this.userModel.findOne({ email: email });
+    // So sánh password nhập vào với password đã mã hóa (bcrypt)
+    if (user && await PasswordHelper.comparePassword(password, user.password)) {
+      const { password, ...result } = user;
+      return result;
     }
-
-    return user;
+    return null;
+  }
+  // Tạo method để tạo JWT token riêng (có thể sử dụng khi cần)
+  async generateToken(user: any) {
+    const payload = { email: user.email, sub: user._id };
+    return {
+      accessToken: this.jwtService.sign(payload),
+    };
   }
 }
+
+

@@ -9,11 +9,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || '46c97a18-c250-4ee4-ba95-b4ed7e512b3f',
+      secretOrKey:
+        configService.get<string>('JWT_SECRET') ||
+        '46c34243-5fa1-4925-ba9b-57ee33e2705a',
     });
   }
 
   async validate(payload: any) {
-    return { userId: payload.sub, email: payload.email };
+    // giải mã token sau khi login
+    return { _id: payload.sub, email: payload.email };
   }
 }

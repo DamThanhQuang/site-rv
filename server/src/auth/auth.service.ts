@@ -8,15 +8,17 @@ import { PasswordHelper } from './helpers/utils';
 import { EmailHelper } from './helpers/utils';
 import { JwtService } from '@nestjs/jwt';
 
+
+
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private jwtService: JwtService
-  ) { }
+    private jwtService: JwtService,
+  ) {}
 
   async signup(signupDto: SignupDto): Promise<User> {
-    const { firstname, lastname, email, password, role } = signupDto;
+    const { firstName, lastName, email, password, role } = signupDto;
 
     if (!password || typeof password !== 'string') {
       throw new BadRequestException('Password không hợp lệ');
@@ -27,14 +29,14 @@ export class AuthService {
 
     const hashedPassword = await PasswordHelper.hashPassword(password);
     const newUser = new this.userModel({
-      firstname,
-      lastname,
+      firstName,
+      lastName,
       email,
       password: hashedPassword,
       role,
     });
 
-    return newUser.save();
+    return newUser.save(); 
   }
 
   async login(login: Login): Promise<any> {
@@ -54,17 +56,22 @@ export class AuthService {
 
     // Tạo JWT token
     const payload = { email: user.email, sub: user._id };
+    const access_token = this.jwtService.sign(payload);
+
     return {
-      user,
-      access_token: this.jwtService.sign(payload),
+      access_token,
+      token_type: 'Bearer',
     };
   }
 
   async validateUser(email: string, password: string): Promise<any> {
-    // Tìm user theo email trong db 
+    // Tìm user theo email trong db
     const user = await this.userModel.findOne({ email: email });
     // So sánh password nhập vào với password đã mã hóa (bcrypt)
-    if (user && await PasswordHelper.comparePassword(password, user.password)) {
+    if (
+      user &&
+      (await PasswordHelper.comparePassword(password, user.password))
+    ) {
       const { password, ...result } = user;
       return result;
     }
@@ -78,5 +85,3 @@ export class AuthService {
     };
   }
 }
-
-

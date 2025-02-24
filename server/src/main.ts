@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { cors: true });
   app.useGlobalPipes(new ValidationPipe({
     whitelist:true,
     forbidNonWhitelisted:true,
@@ -12,6 +12,7 @@ async function bootstrap() {
   }));
   const configService = app.get(ConfigService);
   const port = configService.get('PORT');
+  console.log(port)
   app.setGlobalPrefix('/api/v1', {exclude : [""]});
   await app.listen(port);
 }

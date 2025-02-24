@@ -4,17 +4,18 @@ import {
   MaxLength,
   IsString,
   MinLength,
+  IsOptional,
 } from 'class-validator';
 import { Role } from '../enums/role.enum';
 
 export class SignupDto {
-  @IsNotEmpty() // Bắt buộc phải gửi lên
+  @IsOptional() // Khong Bắt buộc phải gửi lên
   @MaxLength(50) // Tối đa 50 ký tự
-  firstname: string;
+  firstName: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(50)
-  lastname: string;
+  lastName: string;
 
   @IsNotEmpty()
   @MaxLength(50)
@@ -23,13 +24,13 @@ export class SignupDto {
 
   @IsNotEmpty()
   @MaxLength(50)
-  username: string;
+  userName: string;
 
   @IsString()
   @IsNotEmpty()
   @MinLength(6)
   password: string;
 
-  @IsNotEmpty()
-  role: Role// Các vai trò
+  @IsOptional()
+  role: Role; // Các vai trò
 }

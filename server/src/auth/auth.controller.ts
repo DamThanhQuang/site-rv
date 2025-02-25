@@ -7,6 +7,7 @@ import {
   UseGuards,
   Request,
   Get,
+  Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
@@ -15,6 +16,7 @@ import { LocalAuthGuard } from './passport/local-auth.guard';
 import { JwtAuthGuard } from './passport/jwt-auth.guard';
 import { Public } from './decorators/customs.decorator';
 import { MailerService } from '@nestjs-modules/mailer';
+import { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -33,12 +35,8 @@ export class AuthController {
   @Post('login')
   @Public()
   @HttpCode(HttpStatus.OK)
-  async login(@Request() req, @Body() loginDto: Login) {
-    const result = await this.authService.login(loginDto);
-    return {
-      message: 'Đăng nhập thành công',
-      ...result,
-    };
+  async login(@Request() req, @Body() loginDto: Login, @Res() response: Response) {
+    return this.authService.login(loginDto, response);
   }
 
   @UseGuards(JwtAuthGuard)

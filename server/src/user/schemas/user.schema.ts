@@ -15,7 +15,7 @@ export class User{
     email:string;
     @Prop()
     password:string;
-    @Prop({default:"USER"})
+    @Prop({default:"user"})
     role: 'admin' | 'user' | 'business';
 }
 

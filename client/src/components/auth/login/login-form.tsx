@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
 import { useState } from "react";
 import axios from "axios";
+import { setCookie } from "cookies-next";
 
 export function LoginForm({
   className,
@@ -30,18 +31,28 @@ export function LoginForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:8000/api/v1/auth/login", {
-        email,
-        password,
-      });
-      console.log(response.data);
-      localStorage.setItem("token", response.data.token); // Lưu token vao local storage
-      router.push("/");
+      const response = await axios.post(
+        "http://localhost:8000/api/v1/auth/login",
+        { email, password },
+        { withCredentials: true } // Cho phép Backend lưu cookie;
+      );
+      console.log("Response Data:", response.data);
+      const { role } = response.data;
+      //Lưu token vao cookie HTTP_Only
+      // setCookie("token", token, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
+       setCookie("role", role, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
+      
+
+      // Điều hướng dựa vào role
+      if (role === "business") {
+        router.push("/business");
+      } else {
+        router.push("/");
+      }
     } catch (error) {
-      console.log("Login failed:", error);
+      console.log("Error", error);
     }
   };
-
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Req, Res } from '@nestjs/common';
 import { SignupDto } from './dto/signup.dto';
 import { User, UserDocument } from '../user/schemas/user.schema';
 import { InjectModel } from '@nestjs/mongoose';
@@ -7,7 +7,7 @@ import { Login } from './dto/login.dto';
 import { PasswordHelper } from './helpers/utils';
 import { EmailHelper } from './helpers/utils';
 import { JwtService } from '@nestjs/jwt';
-
+import { Response } from 'express';
 
 
 @Injectable()
@@ -36,33 +36,40 @@ export class AuthService {
       role,
     });
 
-    return newUser.save(); 
+    return newUser.save();
   }
 
-  async login(login: Login): Promise<any> {
+  async login(login: Login, @Res() response: Response): Promise<any> {
     const { email, password } = login;
     const user = await this.userModel.findOne({ email });
+  
     if (!user) {
-      throw new BadRequestException('User not found!');
+      return response.status(400).json({ message: "User not found!" });
     }
-    const isPasswordValid = await PasswordHelper.comparePassword(
-      password,
-      user.password,
-    );
-
+  
+    const isPasswordValid = await PasswordHelper.comparePassword(password, user.password);
     if (!isPasswordValid) {
-      throw new BadRequestException('Invalid password!');
+      return response.status(400).json({ message: "Invalid password!" });
     }
-
+  
     // Tạo JWT token
-    const payload = { email: user.email, sub: user._id };
-    const access_token = this.jwtService.sign(payload);
-
-    return {
-      access_token,
-      token_type: 'Bearer',
-    };
+    const payload = { email: user.email, sub: user._id, role: user.role };
+    const token = this.jwtService.sign(payload);
+  
+    // Lưu token vào HTTP-Only Cookie
+    response.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000, // 1 ngày
+    });
+  
+    return response.status(200).json({
+      message: "Login Successful",
+      role: user.role,
+    });
   }
+  
 
   async validateUser(email: string, password: string): Promise<any> {
     // Tìm user theo email trong db

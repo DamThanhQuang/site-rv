@@ -9,6 +9,7 @@ import { ExampleController } from './example/example.controller';
 import { JwtAuthGuard } from './auth/passport/jwt-auth.guard';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ProductModule } from './product/product.module';
+import { BusinessModule } from './business/business.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ProductModule } from './product/product.module';
       inject: [ConfigService],
     }),
     ProductModule,
+    BusinessModule,
   ],
   controllers: [AppController, ExampleController],
   providers: [

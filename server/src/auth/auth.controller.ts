@@ -8,6 +8,8 @@ import {
   Request,
   Get,
   Res,
+  Patch,
+  Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
@@ -56,4 +58,5 @@ export class AuthController {
     });
     return 'ok';
   }
+
 }

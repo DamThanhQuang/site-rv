@@ -1,35 +1,43 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
+import { RegisterAsBusinessDto } from './dto/register-business';
+import { Business, BusinessDocument } from '@/business/schemas/business.schema';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Business.name) private businessModel: Model<BusinessDocument>,
+  ) {}
+  async registerBusiness(
+    userId: string,
+    dto: RegisterAsBusinessDto,
+  ): Promise<any> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found!');
+    }
 
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
+    // ktra xem user la business chua
+    if (user.isBusiness) {
+      throw new Error('User is already a business');
+    }
 
-  findAll() {
-    return `This action returns all user`;
-  }
+    //Tao mot ban ghi moi
+    const newBusiness = await this.businessModel.create({
+      name: dto.name,
+      owner: dto.owner,
+      products: [],
+    });
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
-
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
-  }
-
-  async findById(id: string): Promise<User | null> {
-    return this.userModel.findById(id).exec();
+    // Cap nhat vai tro cua user
+    user.isBusiness = true;
+    user.role = 'business';
+    user.businessId = newBusiness._id;
+    await user.save(); 
+    
+    return { message: 'Success', business:newBusiness };
   }
 }

@@ -1,7 +1,9 @@
 import * as bcrypt from 'bcrypt';
 import { BadRequestException } from '@nestjs/common';
 import { Model } from 'mongoose';
-import { UserDocument } from '../../user/schemas/user.schema';
+import { User, UserDocument } from '../../user/schemas/user.schema';
+import { Business } from '@/business/schemas/business.schema';
+
 
 export class PasswordHelper {
   static async hashPassword(password: string): Promise<string> {
@@ -18,11 +20,8 @@ export class PasswordHelper {
 }
 
 export class EmailHelper {
-  static async checkDuplicateEmail(
-    email: string,
-    userModel: Model<UserDocument>,
-  ): Promise<void> {
-    const existingUser = await userModel.findOne({ email });
+  static async checkDuplicateEmail(email: string, model: Model<User>) {
+    const existingUser = await model.findOne({ email });
     if (existingUser) {
       throw new BadRequestException('Email already exists');
     }

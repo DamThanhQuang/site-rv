@@ -40,14 +40,13 @@ export function LoginForm({
       const { role } = response.data;
       //Lưu token vao cookie HTTP_Only
       // setCookie("token", token, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
-       setCookie("role", role, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
-      
+      setCookie("role", role, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
 
       // Điều hướng dựa vào role
       if (role === "business") {
         router.push("/business");
       } else {
-        router.push("/");
+        router.push("/home");
       }
     } catch (error) {
       console.log("Error", error);

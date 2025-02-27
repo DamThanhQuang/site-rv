@@ -1,47 +1,70 @@
 "use client";
+
+import { Avatar, Dropdown, Navbar, Button } from "flowbite-react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { GrLanguage } from "react-icons/gr";
-import { useRouter } from "next/navigation";
 
+export default function Header() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-const Header = () => {
-  const router = useRouter();
+  useEffect(() => {
+    const checkAuth = () => {
+      setIsLoggedIn(false);
+    };
 
-  const handleAuthClick = () => {
-    router.push("/login");
-  };
+    checkAuth();
+  }, []);
+
   return (
-    <header className={"fixed w-full top-0 z-50 bg-white shadow"}>
-      <div className={"flex items-center justify-around gap-5 h-24"}>
-        <Link href={"/"} className="">
-          <Image
-            src="https://static.tacdn.com/img2/brand_refresh/Tripadvisor_lockup_horizontal_secondary_registered.svg"
-            alt="Tripadvisor Logo"
-            width={150}
-            height={40}
-          />
-        </Link>
-        <div className={"flex justify-around gap-12"}>
-          <Link href={"/Discover"}>Discover</Link>
-          <Link href={"/Trips"}>Trips</Link>
-          <Link href={"/Review"}>Review</Link>
-          <Link href={"/More"}>More</Link>
-        </div>
-        <div className={"flex justify-around gap-12"}>
-          <button>
-            <div className="flex items-center gap-4 ">
-              <GrLanguage />
-              VND
-            </div>
-          </button>
-          <button className="rounded-full bg-color" onClick={handleAuthClick}>
-            Login
-          </button>
-        </div>
+    <Navbar fluid rounded className="shadow-sm bg-white fixed w-full">
+      <Navbar.Brand href="/">
+        <img
+          src="https://static.tacdn.com/img2/brand_refresh/Tripadvisor_lockup_horizontal_secondary_registered.svg"
+          className="mr-3 h-6 sm:h-9"
+          alt="Your Logo"
+        />
+      </Navbar.Brand>
+      <div className="flex md:order-2">
+        {isLoggedIn ? (
+          <Dropdown
+            arrowIcon={false}
+            inline
+            label={
+              <Avatar
+                alt="User settings"
+                img="https://flowbite.com/docs/images/people/profile-picture-5.jpg"
+                rounded
+              />
+            }
+          >
+            <Dropdown.Header>
+              <span className="block text-sm">Bonnie Green</span>
+              <span className="block truncate text-sm font-medium">
+                name@flowbite.com
+              </span>
+            </Dropdown.Header>
+            <Dropdown.Item>Dashboard</Dropdown.Item>
+            <Dropdown.Item>Settings</Dropdown.Item>
+            <Dropdown.Item>Earnings</Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Item>Sign out</Dropdown.Item>
+          </Dropdown>
+        ) : (
+          <Link href="/login">
+            <Button color="gray">Log in</Button>
+          </Link>
+        )}
+        <Navbar.Toggle />
       </div>
-    </header>
+      <Navbar.Collapse>
+        <Navbar.Link href="#" active>
+          Home
+        </Navbar.Link>
+        <Navbar.Link href="#">About</Navbar.Link>
+        <Navbar.Link href="#">Services</Navbar.Link>
+        <Navbar.Link href="#">Pricing</Navbar.Link>
+        <Navbar.Link href="#">Contact</Navbar.Link>
+      </Navbar.Collapse>
+    </Navbar>
   );
-};
-
-export default Header;
+}

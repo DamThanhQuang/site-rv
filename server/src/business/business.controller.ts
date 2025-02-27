@@ -11,10 +11,4 @@ export class BusinessController {
   findAll() {
     return this.businessService.findAll();
   }
-
-  // @Get('getProductByBusiness/:id')
-  // @Public()
-  // findById(@Param('id') businessId: string) {
-  //   return this.businessService.findAllProductsByBusiness(businessId);
-  // }
 }

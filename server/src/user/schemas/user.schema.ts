@@ -10,9 +10,13 @@ export class User {
   @Prop()
   lastname: string;
   @Prop()
+  name: string;
+  @Prop()
   username: string;
   @Prop()
   email: string;
+  @Prop()
+  avatar: string;
   @Prop()
   password: string;
   @Prop({ default: 'user' })

@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { AddReviewDto } from './dto/add-review.dto';
@@ -16,7 +16,8 @@ export class ProductController {
 
   @Post('reviews')
   @Public()
-  addReview(@Body() addReviewDto: AddReviewDto) {
+  async addReview(@Body() addReviewDto: AddReviewDto) {
+    console.log('Adding review for product:', addReviewDto);
     return this.productService.addReview(addReviewDto);
   }
 }

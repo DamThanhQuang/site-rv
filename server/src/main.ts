@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule); 
+  const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -20,9 +20,9 @@ async function bootstrap() {
 
   app.setGlobalPrefix('/api/v1');
 
-  // 🔥 Cấu hình CORS chính xác
+  // Cấu hình CORS
   app.enableCors({
-    origin: "http://localhost:3000", // Chỉ cho phép frontend truy cập
+    origin: 'http://localhost:3000', // Chỉ cho phép frontend truy cập
     credentials: true, // Cho phép gửi cookie/token
     allowedHeaders: ['Content-Type', 'Authorization'], // Header được phép gửi
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Các phương thức được phép

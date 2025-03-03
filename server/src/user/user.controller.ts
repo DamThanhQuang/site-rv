@@ -1,23 +1,22 @@
 import {
   Controller,
-  Get,
-  Post,
   Body,
   Patch,
   Param,
-  Delete,
   UseGuards,
-  ForbiddenException,
-  Request,
-  UnauthorizedException,
+  Put,
+  Get,
+  BadRequestException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterAsBusinessDto } from './dto/register-business';
-import { Public } from '@/auth/decorators/customs.decorator';
 import { JwtAuthGuard } from '@/auth/passport/jwt-auth.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { Public } from '@/auth/decorators/customs.decorator';
+import { Types } from 'mongoose';
 
 @Controller('user')
+@UseGuards(JwtAuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -29,41 +28,40 @@ export class UserController {
     return this.userService.registerBusiness(userId, dto);
   }
 
-  @Get()
+  @Get(':id')
   @Public()
-  getAllUsers() {
-    return this.userService.getAllUsers();
+  findOne(@Param('id') id: string) {
+    // Kiểm tra xem id có phải là ObjectId hợp lệ không
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ID format');
+    }
+    return this.userService.findOne(id);
   }
 
-  @Patch(':id')
-  @UseGuards(JwtAuthGuard)
-  async update(
-    @Param('id') id: string,
-    @Body() updateUserDto: UpdateUserDto,
-    @Request() req,
-  ) {
-    try {
-      // Kiểm tra xem có token không
-      if (!req.headers.authorization) {
-        throw new UnauthorizedException('No token provided');
-      }
-
-      // Kiểm tra user từ token
-      if (!req.user) {
-        throw new UnauthorizedException('Invalid token');
-      }
-
-      // Kiểm tra quyền với lowercase 'role'
-      if (req.user.role !== 'admin' && req.user._id !== id) {
-        throw new ForbiddenException(
-          'You do not have permission to update this user',
-        );
-      }
-
-      return this.userService.updateUser(id, updateUserDto);
-    } catch (error) {
-      console.error('Update user error:', error);
-      throw error;
+  @Put(':id')
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ID format');
     }
+    return this.userService.update(id, updateUserDto);
+  }
+
+  @Put(':id/avatar')
+  updateAvatar(@Param('id') id: string, @Body() avatar: string) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ID format');
+    }
+    return this.userService.updateAvatar(new Types.ObjectId(id), avatar);
+  }
+
+  @Put(':id/cover-image')
+  updateCoverImage(@Param('id') id: string, @Body() coverImage: string) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ID format');
+    }
+    return this.userService.updateCoverImage(
+      new Types.ObjectId(id),
+      coverImage,
+    );
   }
 }

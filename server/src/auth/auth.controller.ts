@@ -36,13 +36,13 @@ export class AuthController {
 
   @Post('login')
   @Public()
-  @HttpCode(HttpStatus.OK)
-  async login(@Request() req, @Body() loginDto: Login, @Res() response: Response) {
+  @UseGuards(LocalAuthGuard)
+  async login(@Body() loginDto: Login, @Res() response: Response) {
     return this.authService.login(loginDto, response);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('profile')
+  @Get('user')
   getProfile(@Request() req) {
     return req.user;
   }
@@ -58,5 +58,4 @@ export class AuthController {
     });
     return 'ok';
   }
-
 }

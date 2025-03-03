@@ -77,40 +77,19 @@ export class AuthService {
       maxAge: 24 * 60 * 60 * 1000, // 1 ngày
     });
 
+    response.cookie('userId', user._id.toString(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000, // 1 ngày
+    });
+
     return response.status(200).json({
       message: 'Login Successful',
       role: user.role,
+      userId: user._id,
     });
   }
-
-  // async registerBusiness(
-  //   userId: string,
-  //   dto: RegisterBusinessDto,
-  // ): Promise<any> {
-  //   const user = await this.userModel.findById(userId);
-  //   // ktra xem user co ton tai khong
-  //   if (!user) {
-  //     throw new NotFoundException('User Not Found');
-  //   }
-
-  //   // Ktra xem user la business chua
-  //   if (user.isBusiness) {
-  //     throw new Error('User is already a business');
-  //   }
-
-  //   // Tao business moi
-  //   const newBusiness = await this.businessModel.create({
-  //     name: dto.name,
-  //     description: dto.description,
-  //     email: user.email,
-  //   });
-
-  //   //Cap hat vai tro cua user
-  //   user.isBusiness=true;
-  //   user.role= 'business',
-  //   await user.save();
-  //   return{message:'asd', newBusiness}
-  // }
 
   async validateUser(email: string, password: string): Promise<any> {
     // Tìm user theo email trong db

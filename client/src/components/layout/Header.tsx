@@ -3,15 +3,39 @@
 import { Avatar, Dropdown, Navbar, Button } from "flowbite-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { getCookie } from "cookies-next";
+import axios from "axios";
+
+interface User {
+  name: string;
+  email: string;
+  avatar?: string;
+}
 
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  const checkAuth = async () => {
+    const userId = getCookie("userId");
+    if (userId) {
+      try {
+        const response = await axios.get(
+          `http://localhost:8000/api/v1/user/${userId}`,
+          { withCredentials: true }
+        );
+        setUser(response.data);
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        setIsLoggedIn(false);
+      }
+    } else {
+      setIsLoggedIn(false);
+    }
+  };
 
   useEffect(() => {
-    const checkAuth = () => {
-      setIsLoggedIn(false);
-    };
-
     checkAuth();
   }, []);
 
@@ -30,24 +54,44 @@ export default function Header() {
             arrowIcon={false}
             inline
             label={
-              <Avatar
-                alt="User settings"
-                img="https://flowbite.com/docs/images/people/profile-picture-5.jpg"
-                rounded
-              />
+              <div className="relative w-10 h-10 overflow-hidden bg-gray-100 rounded-full dark:bg-gray-600">
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt="User avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <svg
+                    className="absolute w-12 h-12 text-gray-400 -left-1"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </div>
             }
           >
             <Dropdown.Header>
-              <span className="block text-sm">Bonnie Green</span>
+              <span className="block text-sm">{user?.name || "User"}</span>
               <span className="block truncate text-sm font-medium">
-                name@flowbite.com
+                {user?.email || "user@example.com"}
               </span>
             </Dropdown.Header>
-            <Dropdown.Item>Dashboard</Dropdown.Item>
-            <Dropdown.Item>Settings</Dropdown.Item>
-            <Dropdown.Item>Earnings</Dropdown.Item>
+            <Dropdown.Item as={Link} href="/profile">
+              Profile
+            </Dropdown.Item>
+            <Dropdown.Item as={Link} href="/settings">
+              Settings
+            </Dropdown.Item>
             <Dropdown.Divider />
-            <Dropdown.Item>Sign out</Dropdown.Item>
+            {/* <Dropdown.Item onClick={handleSignOut}>Sign out</Dropdown.Item> */}
           </Dropdown>
         ) : (
           <Link href="/login">

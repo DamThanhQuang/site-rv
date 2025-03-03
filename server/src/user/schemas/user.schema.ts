@@ -19,6 +19,12 @@ export class User {
   avatar: string;
   @Prop()
   password: string;
+  @Prop()
+  location: string;
+  @Prop()
+  description: string;
+  @Prop()
+  coverImage: string;
   @Prop({ default: 'user' })
   role: 'admin' | 'user' | 'business';
   @Prop({ default: false })

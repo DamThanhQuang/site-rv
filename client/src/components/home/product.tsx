@@ -91,15 +91,15 @@ const ListProduct = () => {
   }
   return (
     <div className="ml-10 mt-10 flex justify-center">
-      <div className="w-8/12 ">
-        <Carousel />
+      <div className="w-8/12">
         <div className="relative mt-10">
-          <div className="flex items-center justify-center space-x-4 transition-transform duration-300">
-            {cards.slice(currentIndex, currentIndex + 4).map((card, index) => (
+          <Carousel />
+          <div className="flex items-center justify-center space-x-4">
+            {cards.map((card) => (
               <Link
                 href={`/products/${card.id}`}
                 key={card.id}
-                className="w-full"
+                className="w-full cursor-pointer"
               >
                 <div className="w-full max-w-sm bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 transition-transform duration-300 hover:scale-105">
                   <img
@@ -130,31 +130,17 @@ const ListProduct = () => {
                       <span className="text-2xl font-bold text-gray-900 dark:text-white">
                         ${card.price}
                       </span>
-                      <a
+                      {/* <a
                         href="#"
                         className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                       >
                         Add to cart
-                      </a>
+                      </a> */}
                     </div>
                   </div>
                 </div>
               </Link>
             ))}
-          </div>
-          <div className="flex items-center justify-between mt-4 relative  bottom-44 ">
-            <button
-              className="w-8 h-8 rounded-full bg-gray-300 hover:bg-gray-400 transition duration-200"
-              onClick={handlePrev}
-            >
-              &lt;
-            </button>
-            <button
-              className="w-8 h-8 rounded-full bg-gray-300 hover:bg-gray-400 transition duration-200"
-              onClick={handleNext}
-            >
-              &gt;
-            </button>
           </div>
         </div>
       </div>

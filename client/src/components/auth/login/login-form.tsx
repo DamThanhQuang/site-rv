@@ -1,4 +1,8 @@
 "use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
+import { setCookie } from "cookies-next";
 import { cn } from "lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,11 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CiUser } from "react-icons/ci";
-import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
-import { useState } from "react";
-import axios from "axios";
-import { setCookie } from "cookies-next";
 
 export function LoginForm({
   className,
@@ -36,11 +36,31 @@ export function LoginForm({
         { email, password },
         { withCredentials: true } // Cho phép Backend lưu cookie;
       );
-      console.log("Response Data:", response.data);
-      const { role } = response.data;
-      //Lưu token vao cookie HTTP_Only
-      // setCookie("token", token, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
+      console.log("Login response:", response.data); // Debug log
+      const { role, userId } = response.data;
+      if (!userId) {
+        console.error("No userId in response");
+        return;
+      }
+
+      // Lưu nguyên userId dạng string (ObjectId) vào cookie
+
+      setCookie("userId", userId, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
       setCookie("role", role, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
+
+      setCookie("userId", userId, {
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      });
+
+      setCookie("role", role, {
+        maxAge: 24 * 60 * 60 * 1000,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      });
 
       // Điều hướng dựa vào role
       if (role === "business") {

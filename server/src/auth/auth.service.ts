@@ -71,23 +71,24 @@ export class AuthService {
 
     // Lưu token vào HTTP-Only Cookie
     response.cookie('token', token, {
-      httpOnly: true,
+      httpOnly: false, // Keep token HttpOnly for security
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000, // 1 ngày
+      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
     response.cookie('userId', user._id.toString(), {
-      httpOnly: true,
+      httpOnly: false, // Changed to false so JavaScript can read it
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000, // 1 ngày
+      sameSite: 'lax', // Changed from 'strict' to 'lax'
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
     return response.status(200).json({
       message: 'Login Successful',
       role: user.role,
-      userId: user._id,
+      userId: user._id.toString(),
+      token,
     });
   }
 

@@ -41,6 +41,7 @@ export class ProductService {
         ...createProductDto,
         businessId: business._id,
         _id: new Types.ObjectId(),
+        image: createProductDto.images[0],
       });
 
       console.log(newProduct);

@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { setCookie } from "cookies-next";
 import { cn } from "lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CiUser } from "react-icons/ci";
 import { FcGoogle } from "react-icons/fc";
+import Cookies from "js-cookie";
 
 export function LoginForm({
   className,
@@ -34,42 +34,30 @@ export function LoginForm({
       const response = await axios.post(
         "http://localhost:8000/api/v1/auth/login",
         { email, password },
-        { withCredentials: true } // Cho phép Backend lưu cookie;
+        { withCredentials: true }
       );
-      console.log("Login response:", response.data); // Debug log
-      const { role, userId } = response.data;
-      if (!userId) {
-        console.error("No userId in response");
-        return;
-      }
 
-      // Lưu nguyên userId dạng string (ObjectId) vào cookie
+      const { userId, role, token } = response.data;
+      console.log("Login successful, userId:", userId); // Debug log
+      console.log("Token:", token); // Debug log
 
-      setCookie("userId", userId, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
-      setCookie("role", role, { maxAge: 24 * 60 * 60 * 1000, path: "/" });
-
-      setCookie("userId", userId, {
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      // Set cookies with proper configuration
+      Cookies.set("userId", userId, {
+        expires: 1, // 1 day
         path: "/",
-        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
       });
 
-      setCookie("role", role, {
-        maxAge: 24 * 60 * 60 * 1000,
+      Cookies.set("token", token, {
+        expires: 1,
         path: "/",
-        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
       });
 
-      // Điều hướng dựa vào role
-      if (role === "business") {
-        router.push("/business");
-      } else {
-        router.push("/home");
-      }
+      // Navigate to profile
+      router.push("/home");
     } catch (error) {
-      console.log("Error", error);
+      console.error("Login error:", error);
     }
   };
   return (

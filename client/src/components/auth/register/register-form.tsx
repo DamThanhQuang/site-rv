@@ -32,13 +32,16 @@ export function RegisterForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:8000/api/v1/auth/register", {
-        email,
-        firstName,
-        lastName,
-        userName,
-        password,
-      });
+      const response = await axios.post(
+        "http://localhost:8000/api/v1/auth/register",
+        {
+          email,
+          firstName,
+          lastName,
+          userName,
+          password,
+        }
+      );
       console.log(response.data);
       router.push("/login");
     } catch (error) {

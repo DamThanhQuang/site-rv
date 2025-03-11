@@ -3,7 +3,7 @@ import { IsMongoId, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 export class CreateProductDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  title: string;
 
   @IsString()
   @IsNotEmpty()
@@ -18,5 +18,45 @@ export class CreateProductDto {
   businessId: string;
 
   @IsNotEmpty()
-  image: string;
+  images: string[];
+
+  @IsNotEmpty()
+  propertyType: string;
+
+  @IsNotEmpty()
+  location: {
+    address: string;
+    apartment?: string;
+    district: string;
+    city: string;
+    country: string;
+    postalCode?: string;
+  };
+
+  @IsNotEmpty()
+  amenities: string[];
+
+  @IsNotEmpty()
+  @IsNotEmpty()
+  privacyType: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  livingRooms: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  bedrooms: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  beds: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  bathrooms: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  discountedPrice: number;
 }

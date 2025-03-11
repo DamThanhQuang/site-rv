@@ -19,7 +19,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const arr = [{ id: 1 }];
   return (
     <html lang="vi">
       <body className={fontSans.className}>

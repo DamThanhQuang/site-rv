@@ -39,6 +39,10 @@ export class UserService {
       description: dto.description,
       owner: dto.owner,
       email: user.email, // Add user email
+      phoneNumber: dto.phoneNumber,
+      address: dto.address,
+      city: dto.city,
+      country: dto.country,
       products: [],
     });
 
@@ -59,36 +63,32 @@ export class UserService {
     };
   }
 
-  async findOne(id: string): Promise<User> {
+  async findById(id: string): Promise<User> {
     const user = await this.userModel.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
     return user;
-  }
-
-  async update(id: string, updateProfileDto: UpdateUserDto): Promise<User> {
-    const updatedUser = await this.userModel.findByIdAndUpdate(
-      id,
-      updateProfileDto,
-      { new: true },
-    );
-    if (!updatedUser) {
-      throw new NotFoundException('User not found');
-    }
-    return updatedUser;
   }
 
   async updateAvatar(
-    id: number | Types.ObjectId,
-    avatarUrl: string,
+    id: string,
+    updateAvatarDto: UpdateUserDto,
   ): Promise<User> {
-    await this.userModel.findByIdAndUpdate(id, { avatar: avatarUrl });
-    const user = await this.userModel.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
+    try {
+      const updateUser = await this.userModel.findByIdAndUpdate(
+        id,
+        { avatar: updateAvatarDto.avatar },
+        { new: true },
+      );
+      if (!updateUser) {
+        throw new NotFoundException('User not found');
+      }
+      return updateUser;
+    } catch (error) {
+      console.error('Error updating avatar', error);
+      throw new InternalServerErrorException('Error updating avatar');
     }
-    return user;
   }
 
   async updateCoverImage(
@@ -101,5 +101,20 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
     return user;
+  }
+
+  async updateUser(id: string, dto: UpdateUserDto): Promise<User> {
+    try {
+      const updateUser = await this.userModel.findByIdAndUpdate(id, dto, {
+        new: true,
+      });
+      if (!updateUser) {
+        throw new NotFoundException('User not found');
+      }
+      return updateUser;
+    } catch (error) {
+      console.error('Error updating user', error);
+      throw new InternalServerErrorException('Error updating user');
+    }
   }
 }

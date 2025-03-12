@@ -57,7 +57,7 @@ export function RegisterBusiness({
         }
       );
       console.log("Đăng ký business thành công:", response.data);
-      router.push("/business");
+      router.push("/host");
     } catch (error) {
       console.error("Đăng ký business thất bại:", error);
     }

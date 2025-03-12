@@ -1,8 +1,99 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import axios from "@/lib/axios";
+import Cookies from "js-cookie";
 
 export default function HostHomesLandingPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isButtonLoading, setIsButtonLoading] = useState(false);
+
+  useEffect(() => {
+    const checkBusinessRole = async () => {
+      const token = Cookies.get("token");
+      const userId = Cookies.get("userId");
+
+      if (!token || !userId) {
+        // User not logged in, show landing page
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Fix the API endpoint here too
+        const response = await axios.get(`user/${userId}`, {
+          // Changed from user/${userId}
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // Check if user has business role
+        if (response.data && response.data.role === "business") {
+          // User is already a business owner, redirect to business dashboard
+          router.push("/host/dashboard/today");
+        } else {
+          // User doesn't have business role, show landing page
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Failed to check user role:", error);
+        setIsLoading(false);
+      }
+    };
+
+    checkBusinessRole();
+  }, [router]);
+
+  const handleStartButtonClick = async () => {
+    const token = Cookies.get("token");
+    const userId = Cookies.get("userId");
+
+    // If user is not logged in, redirect to login
+    if (!token || !userId) {
+      router.push("/login");
+      return;
+    }
+
+    setIsButtonLoading(true);
+    try {
+      // Fix the API endpoint - the most common issue is path format
+      const response = await axios.get(`users/${userId}`, {
+        // Changed from user/${userId}
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Navigate based on user role
+      if (response.data && response.data.role === "business") {
+        router.push("/host/dashboard/today");
+      } else {
+        router.push("/register-business");
+      }
+    } catch (error) {
+      console.error("Failed to check user role:", error);
+      // If there's an error, default to register-business
+      router.push("/register-business");
+    } finally {
+      setIsButtonLoading(false);
+    }
+  };
+
+  // Show loading state while checking role
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="spinner border-t-4 border-blue-500 border-solid rounded-full w-12 h-12 animate-spin"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -24,12 +115,17 @@ export default function HostHomesLandingPage() {
             Hãy trở thành chủ nhà và bắt đầu hành trình kinh doanh độc đáo của
             bạn.
           </p>
-          <Link
-            href="/register-business" // Cập nhật đường dẫn
+          <button
+            onClick={handleStartButtonClick}
             className="mt-8 inline-block px-8 py-3 bg-red-500 hover:bg-red-600 rounded-full font-semibold"
+            disabled={isButtonLoading}
           >
-            Bắt đầu ngay
-          </Link>
+            {isButtonLoading ? (
+              <span>Đang xử lý...</span>
+            ) : (
+              <span>Bắt đầu ngay</span>
+            )}
+          </button>
         </div>
       </header>
 
@@ -76,14 +172,15 @@ export default function HostHomesLandingPage() {
             Đăng ký hoặc đăng nhập để bắt đầu trải nghiệm ngay hôm nay.
           </p>
           <div className="mt-8 flex flex-col md:flex-row justify-center gap-4">
-            <Link
-              href="/register-business"
+            <button
+              onClick={handleStartButtonClick}
               className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white rounded-full font-semibold"
+              disabled={isButtonLoading}
             >
-              Đăng ký
-            </Link>
+              {isButtonLoading ? "Đang xử lý..." : "Đăng ký"}
+            </button>
             <Link
-              href="/login" // Cập nhật đường dẫn đăng nhập
+              href="/login"
               className="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-semibold"
             >
               Đăng nhập

@@ -8,9 +8,28 @@ import { IoMdTrendingUp } from "react-icons/io";
 
 export default function Price() {
   const router = useRouter();
-  const [price, setPrice] = useState<string>("1023584");
+  const [price, setPrice] = useState<string>("654053");
   const [isFocused, setIsFocused] = useState(false);
   const [isPriceValid, setIsPriceValid] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load saved price on component mount
+  useEffect(() => {
+    try {
+      const savedPrice = localStorage.getItem("listing_price");
+      if (savedPrice) {
+        const savedData = JSON.parse(savedPrice);
+        if (savedData.price) {
+          setPrice(savedData.price);
+          setIsPriceValid(parseInt(savedData.price) >= 100000);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load saved price:", error);
+      setError("Không thể tải dữ liệu đã lưu");
+    }
+  }, []);
 
   // Format price as VND currency
   const formatCurrency = (value: string): string => {
@@ -30,9 +49,20 @@ export default function Price() {
 
   // Handle price change
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "");
-    setPrice(value);
-    setIsPriceValid(parseInt(value) >= 100000); // Ensure price is at least 100,000₫
+    // Remove all non-digits and format
+    const rawValue = e.target.value.replace(/\D/g, "");
+    setPrice(rawValue);
+    setIsPriceValid(parseInt(rawValue) >= 100000 || rawValue === ""); // Empty is valid while typing
+  };
+
+  // Handle blur event to validate empty input
+  const handleBlur = () => {
+    setIsFocused(false);
+    // If empty on blur, set a default value
+    if (price === "") {
+      setPrice("100000");
+      setIsPriceValid(true);
+    }
   };
 
   // Animation variants
@@ -60,12 +90,28 @@ export default function Price() {
   ];
 
   const handleBack = () => {
+    // Save before navigating back
+    try {
+      localStorage.setItem("listing_price", JSON.stringify({ price }));
+    } catch (error) {
+      console.error("Failed to save price data:", error);
+    }
     router.push("/create/finish-setup");
   };
 
   const handleNext = () => {
-    if (isPriceValid) {
+    if (!isPriceValid) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      localStorage.setItem("listing_price", JSON.stringify({ price }));
       router.push("/create/receipt");
+    } catch (error) {
+      console.error("Failed to save price data:", error);
+      setError("Đã xảy ra lỗi khi lưu dữ liệu");
+      setIsLoading(false);
     }
   };
 
@@ -118,7 +164,7 @@ export default function Price() {
               value={formattedPrice}
               onChange={handlePriceChange}
               onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
+              onBlur={handleBlur}
               className={`w-full pl-10 pr-4 py-5 text-2xl font-medium border rounded-lg transition-all ${
                 isFocused
                   ? "border-rose-500 ring-2 ring-rose-100"
@@ -126,11 +172,13 @@ export default function Price() {
                   ? "border-red-500"
                   : "border-gray-300"
               }`}
+              aria-invalid={!isPriceValid}
+              aria-describedby="price-error"
             />
           </div>
 
           {!isPriceValid && (
-            <p className="mt-2 text-red-500 text-sm">
+            <p id="price-error" className="mt-2 text-red-500 text-sm">
               Giá phải ít nhất 100.000₫ mỗi đêm
             </p>
           )}
@@ -172,7 +220,10 @@ export default function Price() {
               {suggestedPrices.map((item, index) => (
                 <div
                   key={index}
-                  onClick={() => setPrice(item.value)}
+                  onClick={() => {
+                    setPrice(item.value);
+                    setIsPriceValid(true);
+                  }}
                   className={`cursor-pointer p-3 rounded-lg border transition-all ${
                     price === item.value
                       ? "border-rose-500 bg-rose-50"
@@ -189,7 +240,12 @@ export default function Price() {
             </div>
           </div>
 
-          <button className="mt-2 flex items-center text-rose-600 text-sm font-medium">
+          <button
+            className="mt-3 flex items-center text-rose-600 text-sm font-medium hover:text-rose-700 transition-colors"
+            onClick={() =>
+              window.open("https://www.example.com/pricing-help", "_blank")
+            }
+          >
             <FaInfoCircle className="mr-1" />
             Tìm hiểu thêm về định giá
           </button>
@@ -199,7 +255,7 @@ export default function Price() {
         <motion.div variants={itemVariant} className="mb-10">
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
             <div className="flex items-start">
-              <FaCoins className="text-blue-500 mr-3 mt-1" />
+              <FaCoins className="text-blue-500 mr-3 mt-1 flex-shrink-0" />
               <div>
                 <h4 className="font-medium text-blue-800 mb-2">
                   Lời khuyên định giá:
@@ -224,7 +280,18 @@ export default function Price() {
         </motion.div>
       </motion.div>
 
-      {/* Buttons điều hướng */}
+      {/* Error message display */}
+      {error && (
+        <motion.div
+          className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {/* Navigation buttons */}
       <motion.div
         className="mt-8 w-full flex justify-between"
         initial={{ opacity: 0 }}
@@ -236,22 +303,23 @@ export default function Price() {
           whileHover={{ scale: 1.05, backgroundColor: "#f3f4f6" }}
           whileTap={{ scale: 0.95 }}
           onClick={handleBack}
+          disabled={isLoading}
         >
           Quay lại
         </motion.button>
         <motion.button
-          className={`px-6 py-3 bg-rose-500 text-white font-medium rounded-lg ${
-            !isPriceValid && "opacity-70 cursor-not-allowed"
+          className={`px-6 py-3 bg-rose-500 text-white font-medium rounded-lg transition ${
+            (!isPriceValid || isLoading) && "opacity-70 cursor-not-allowed"
           }`}
           whileHover={{
-            scale: isPriceValid ? 1.05 : 1,
-            backgroundColor: isPriceValid ? "#e11d48" : undefined,
+            scale: isPriceValid && !isLoading ? 1.05 : 1,
+            backgroundColor: isPriceValid && !isLoading ? "#e11d48" : undefined,
           }}
-          whileTap={{ scale: isPriceValid ? 0.95 : 1 }}
-          disabled={!isPriceValid}
+          whileTap={{ scale: isPriceValid && !isLoading ? 0.95 : 1 }}
+          disabled={!isPriceValid || isLoading}
           onClick={handleNext}
         >
-          Tiếp theo
+          {isLoading ? "Đang xử lý..." : "Tiếp theo"}
         </motion.button>
       </motion.div>
     </div>

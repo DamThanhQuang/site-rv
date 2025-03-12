@@ -38,7 +38,7 @@ export class CreateProductDto {
 
   @IsNotEmpty()
   @IsNotEmpty()
-  privacyType: string;
+  privacyType: 'entire_place' | 'private_room' | 'shared_room' | 'public';
 
   @IsNumber()
   @IsNotEmpty()

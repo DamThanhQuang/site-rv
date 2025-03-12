@@ -13,6 +13,16 @@ interface PhotoFile extends File {
   id: string;
 }
 
+// Hàm chuyển File thành chuỗi Base64
+const readFileAsDataURL = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function Photo() {
   const router = useRouter();
   const [photos, setPhotos] = useState<PhotoFile[]>([]);
@@ -23,7 +33,7 @@ export default function Photo() {
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Tải URLs đã lưu từ localStorage khi component mount
+  // Lấy ảnh đã lưu từ localStorage khi component mount
   useEffect(() => {
     try {
       const savedImages = localStorage.getItem("images");
@@ -36,36 +46,33 @@ export default function Photo() {
     }
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Xử lý khi người dùng chọn file
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      addFiles(files);
+      await addFiles(files);
     }
   };
 
-  const addFiles = (files: FileList) => {
+  // Chuyển đổi file ảnh sang Base64 và lưu vào state
+  const addFiles = async (files: FileList) => {
     const newFiles: PhotoFile[] = [];
-
-    Array.from(files).forEach((file) => {
-      // Chỉ chấp nhận file ảnh
+    for (const file of Array.from(files)) {
       if (file.type.startsWith("image/")) {
+        const base64 = await readFileAsDataURL(file);
         const photoFile = file as PhotoFile;
-        photoFile.preview = URL.createObjectURL(file);
+        photoFile.preview = base64; // Lưu chuỗi Base64 làm preview
         photoFile.id = `photo-${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 9)}`;
         newFiles.push(photoFile);
       }
-    });
-
+    }
     setPhotos((prev) => [...prev, ...newFiles]);
   };
 
   const removePhoto = (id: string) => {
-    setPhotos((prev) => {
-      const updatedPhotos = prev.filter((photo) => photo.id !== id);
-      return updatedPhotos;
-    });
+    setPhotos((prev) => prev.filter((photo) => photo.id !== id));
   };
 
   const removeUploadedPhoto = (url: string) => {
@@ -76,12 +83,11 @@ export default function Photo() {
     });
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-
     if (e.dataTransfer.files) {
-      addFiles(e.dataTransfer.files);
+      await addFiles(e.dataTransfer.files);
     }
   };
 
@@ -100,7 +106,7 @@ export default function Photo() {
     }
   };
 
-  // Animation variants
+  // Các biến animation của framer-motion
   const containerVariant = {
     hidden: { opacity: 0 },
     show: {
@@ -121,22 +127,17 @@ export default function Photo() {
     router.push("/create/amenity");
   };
 
-  // Upload ảnh lên server
+  // Hàm upload ảnh lên server (nếu cần, hiện tại đang mô phỏng)
   const uploadImages = async () => {
     if (photos.length === 0) return [];
-
     const token = localStorage.getItem("accessToken");
     if (!token) {
       throw new Error("Bạn cần đăng nhập để tải ảnh lên");
     }
-
-    // Tạo form data để upload nhiều ảnh
     const formData = new FormData();
     photos.forEach((photo) => {
       formData.append("files", photo);
     });
-
-    // Tùy thuộc vào API của bạn
     const response = await axios.post(
       "http://localhost:3001/upload",
       formData,
@@ -155,38 +156,32 @@ export default function Photo() {
         },
       }
     );
-
-    // Giả định API trả về mảng URLs của ảnh đã upload
     return response.data;
   };
 
+  // Xử lý khi người dùng nhấn "Tiếp theo"
   const handleNext = async () => {
     if (photos.length === 0 && uploadedUrls.length < 5) {
       setError("Bạn cần ít nhất 5 ảnh để tiếp tục");
       return;
     }
-
     try {
       setIsLoading(true);
       setError(null);
-
       let imageUrls = [...uploadedUrls];
 
-      // Nếu có ảnh mới cần upload
+      // Nếu có ảnh mới, upload (ở đây đang mô phỏng)
       if (photos.length > 0) {
-        // Mock upload API cho mục đích demo
-        // Trong thực tế, bạn sẽ gọi API upload thực sự
+        // Nếu có API upload thực tế, bạn có thể gọi uploadImages()
         // const uploadedImageUrls = await uploadImages();
 
-        // Mô phỏng upload thành công
+        // Mô phỏng upload thành công (với ảnh được chuyển Base64)
         await new Promise((resolve) => setTimeout(resolve, 1500));
         const mockUploadedUrls = photos.map((photo) => photo.preview);
-
-        // Kết hợp URLs đã có với URLs mới upload
         imageUrls = [...imageUrls, ...mockUploadedUrls];
       }
 
-      // Lưu vào localStorage
+      // Lưu mảng URLs vào localStorage
       localStorage.setItem("images", JSON.stringify(imageUrls));
 
       // Lưu ảnh đầu tiên làm ảnh chính
@@ -194,7 +189,6 @@ export default function Photo() {
         localStorage.setItem("image", imageUrls[0]);
       }
 
-      // Chuyển sang trang tiếp theo
       router.push("/create/title");
     } catch (err: any) {
       console.error("Lỗi khi tải ảnh:", err);
@@ -225,7 +219,7 @@ export default function Photo() {
         </p>
       </motion.div>
 
-      {/* Error message */}
+      {/* Hiển thị thông báo lỗi */}
       {error && (
         <motion.div
           className="w-full mb-4 p-4 bg-red-100 text-red-700 rounded-lg flex items-center"
@@ -253,7 +247,7 @@ export default function Photo() {
         animate="show"
         className="w-full"
       >
-        {/* Upload area */}
+        {/* Khu vực upload ảnh */}
         <motion.div variants={itemVariant} className="mb-8">
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
@@ -274,7 +268,6 @@ export default function Photo() {
               onChange={handleFileChange}
               ref={fileInputRef}
             />
-
             <div className="flex flex-col items-center justify-center py-6">
               <motion.div
                 className="text-5xl text-rose-500 mb-4"
@@ -294,7 +287,7 @@ export default function Photo() {
           </div>
         </motion.div>
 
-        {/* Photo counter */}
+        {/* Hiển thị số lượng ảnh */}
         <motion.div
           variants={itemVariant}
           className="flex items-center justify-between p-4 bg-gray-50 rounded-md mb-6 border border-gray-200"
@@ -303,7 +296,6 @@ export default function Photo() {
             <MdOutlineCabin className="text-2xl text-rose-500 mr-3" />
             <span>Chỗ ở của bạn</span>
           </div>
-
           <div
             className={`font-medium ${
               isReadyToNext ? "text-green-500" : "text-amber-500"
@@ -313,7 +305,7 @@ export default function Photo() {
           </div>
         </motion.div>
 
-        {/* Progress bar when uploading */}
+        {/* Progress bar khi upload */}
         {isLoading && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -337,7 +329,7 @@ export default function Photo() {
           </motion.div>
         )}
 
-        {/* Previously uploaded photos */}
+        {/* Ảnh đã lưu trong localStorage */}
         {uploadedUrls.length > 0 && (
           <motion.div variants={itemVariant} className="mb-6">
             <h3 className="font-medium text-gray-700 mb-2">Ảnh đã tải lên</h3>
@@ -378,7 +370,7 @@ export default function Photo() {
           </motion.div>
         )}
 
-        {/* New photos to upload */}
+        {/* Ảnh mới vừa chọn để upload */}
         <motion.div variants={itemVariant} className="mb-8">
           {photos.length > 0 && (
             <h3 className="font-medium text-gray-700 mb-2">Ảnh mới</h3>
@@ -412,7 +404,7 @@ export default function Photo() {
               ))}
             </AnimatePresence>
 
-            {/* Empty states to show required number */}
+            {/* Hiển thị khung trống để đủ 5 ảnh */}
             {totalImages < 5 &&
               Array.from({ length: 5 - totalImages }).map((_, index) => (
                 <motion.div
@@ -444,7 +436,7 @@ export default function Photo() {
         </motion.div>
       </motion.div>
 
-      {/* Buttons điều hướng */}
+      {/* Các nút điều hướng */}
       <motion.div
         className="mt-8 w-full flex justify-between"
         initial={{ opacity: 0 }}

@@ -73,4 +73,10 @@ export class UserController {
     }
     return this.userService.updateUser(id, dto);
   }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  async getUser(@Param('id') id: string) {
+    return this.userService.getUserById(id);
+  }
 }

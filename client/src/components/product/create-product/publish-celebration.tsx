@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Confetti from "react-confetti";
 import { FaHome, FaCalendarAlt, FaChartLine, FaRegSmile } from "react-icons/fa";
 import axios from "axios"; // Add missing import
+import Cookies from "js-cookie";
 
 export default function PublishCelebration() {
   const router = useRouter();
@@ -85,7 +86,7 @@ export default function PublishCelebration() {
         };
 
         // Lấy token từ localStorage
-        const token = localStorage.getItem("accessToken");
+        const token = Cookies.get("token");
 
         if (!token) {
           throw new Error("Bạn cần đăng nhập để thực hiện chức năng này");
@@ -93,7 +94,7 @@ export default function PublishCelebration() {
 
         // Gửi dữ liệu lên API
         const response = await axios.post(
-          "http://localhost:3001/product",
+          "http://localhost:3000/host/dashboard/listing",
           productData,
           {
             headers: {

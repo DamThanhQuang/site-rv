@@ -9,9 +9,6 @@ export class Product {
   _id: Types.ObjectId;
 
   @Prop({ required: true })
-  name: string;
-
-  @Prop({ required: true })
   title: string;
 
   @Prop({ required: true })
@@ -49,7 +46,7 @@ export class Product {
   // Privacy type
   @Prop({
     required: true,
-    enum: ['entire_place', 'private_room', 'shared_room'],
+    enum: ['entire_place', 'private_room', 'shared_room', 'public'],
   })
   privacyType: string;
 

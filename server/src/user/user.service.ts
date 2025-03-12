@@ -117,4 +117,12 @@ export class UserService {
       throw new InternalServerErrorException('Error updating user');
     }
   }
+
+  async getUserById(id: string): Promise<User> {
+    const user = await this.userModel.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
 }

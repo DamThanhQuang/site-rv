@@ -1,23 +1,58 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+
 export default function BecomeAHost() {
   const router = useRouter();
   const handleGetStarted = () => {
     router.push("/create/about-your-place");
   };
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        when: "beforeChildren",
+        staggerChildren: 0.3,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: "spring", stiffness: 100 },
+    },
+  };
+
   return (
-    <main className="flex flex-col max-w-6xl mx-auto px-4 py-12">
+    <motion.main
+      className="flex flex-col max-w-6xl mx-auto px-4 py-12"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       <div className="w-full pr-0">
-        <div className="flex space-y-8">
-          <div className="flex flex-col justify-center mb-8">
+        <div className="flex flex-col space-y-8">
+          <motion.div
+            className="flex flex-col justify-center mb-8"
+            variants={itemVariants}
+          >
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
               Bắt đầu trên Airbnb thật dễ dàng
             </h1>
-          </div>
+          </motion.div>
 
           <div className="space-y-12">
             {/* Bước 1 */}
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <motion.div
+              className="flex flex-col md:flex-row items-start md:items-center gap-6"
+              variants={itemVariants}
+            >
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rose-500 text-white font-semibold">
                 1
               </div>
@@ -30,17 +65,24 @@ export default function BecomeAHost() {
                   thuê và số lượng khách có thể ở tại đó.
                 </p>
               </div>
-              <div className="w-full md:w-48 lg:w-64 mt-4 md:mt-0">
+              <motion.div
+                className="w-full md:w-48 lg:w-64 mt-4 md:mt-0"
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
                 <img
                   className="w-full h-auto rounded-lg shadow-md"
                   src="https://a0.muscache.com/4ea/air/v2/pictures/da2e1a40-a92b-449e-8575-d8208cc5d409.jpg"
                   alt="Bước 1: Chia sẻ thông tin"
                 />
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
             {/* Bước 2 */}
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <motion.div
+              className="flex flex-col md:flex-row items-start md:items-center gap-6"
+              variants={itemVariants}
+            >
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rose-500 text-white font-semibold">
                 2
               </div>
@@ -53,17 +95,24 @@ export default function BecomeAHost() {
                   chúng tôi sẽ giúp bạn thực hiện.
                 </p>
               </div>
-              <div className="w-full md:w-48 lg:w-64 mt-4 md:mt-0">
+              <motion.div
+                className="w-full md:w-48 lg:w-64 mt-4 md:mt-0"
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
                 <img
                   className="w-full h-auto rounded-lg shadow-md"
                   src="https://a0.muscache.com/4ea/air/v2/pictures/bfc0bc89-58cb-4525-a26e-7b23b750ee00.jpg"
                   alt="Bước 2: Làm cho nhà/phòng nổi bật"
                 />
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
             {/* Bước 3 */}
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <motion.div
+              className="flex flex-col md:flex-row items-start md:items-center gap-6"
+              variants={itemVariants}
+            >
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rose-500 text-white font-semibold">
                 3
               </div>
@@ -76,29 +125,44 @@ export default function BecomeAHost() {
                   mục cho thuê của bạn.
                 </p>
               </div>
-              <div className="w-full md:w-48 lg:w-64 mt-4 md:mt-0">
+              <motion.div
+                className="w-full md:w-48 lg:w-64 mt-4 md:mt-0"
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
                 <img
                   className="w-full h-auto rounded-lg shadow-md"
                   src="https://a0.muscache.com/4ea/air/v2/pictures/c0634c73-9109-4710-8968-3e927df1191c.jpg"
                   alt="Bước 3: Hoàn thiện và đăng"
                 />
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </div>
 
-      {/* Panel được di chuyển xuống dưới */}
-      <div className="mt-12 max-w-md mx-auto w-full md:max-w-lg bg-gray-50 rounded-xl p-6 shadow-sm">
+      {/* Panel with animated button */}
+      <motion.div
+        className="mt-12 max-w-md mx-auto w-full md:max-w-lg bg-gray-50 rounded-xl p-6 shadow-sm"
+        variants={itemVariants}
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1, duration: 0.5 }}
+      >
         <div className="text-center">
-          <button
+          <motion.button
             className="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200"
             onClick={handleGetStarted}
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)",
+            }}
+            whileTap={{ scale: 0.95 }}
           >
             Bắt đầu ngay
-          </button>
+          </motion.button>
         </div>
-      </div>
-    </main>
+      </motion.div>
+    </motion.main>
   );
 }

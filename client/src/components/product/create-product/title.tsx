@@ -9,31 +9,33 @@ export default function Title() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-  const [formData, setFormData] = useState({ title: "" });
-  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const maxLength = 32;
 
+  // Load saved data on component mount only
   useEffect(() => {
     try {
       const savedTitle = localStorage.getItem("title");
       if (savedTitle) {
-        const saveData = JSON.parse(savedTitle);
-        setFormData(saveData);
-      }
-
-      // Kiểm tra xem đã nhập đủ thông tin chưa
-      if (formData.title) {
-        setIsComplete(true);
+        const savedData = JSON.parse(savedTitle);
+        if (savedData.title) {
+          setTitle(savedData.title);
+          setIsComplete(true);
+        }
       }
     } catch (error) {
-      console.error("Get saved data error:", error); //Here
+      console.error("Get saved data error:", error);
     }
-  });
-  const maxLength = 32;
+  }, []); // Empty dependency array to run only once on mount
 
-  // Tính số ký tự còn lại hoặc đã nhập
+  // Update isComplete whenever title changes
+  useEffect(() => {
+    setIsComplete(title.length > 0 && title.length <= maxLength);
+  }, [title]);
+
+  // Tính số ký tự và validate
   const charCount = title.length;
   const isValid = charCount > 0 && charCount <= maxLength;
 
@@ -78,9 +80,20 @@ export default function Title() {
   };
 
   const handleNext = () => {
-    if (isValid) {
-      // Lưu tiêu đề và chuyển trang
+    if (!isValid) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Save the current title value
+      localStorage.setItem("title", JSON.stringify({ title }));
       router.push("/create/description");
+    } catch (error) {
+      console.error("Save data error:", error);
+      setError("Đã xảy ra lỗi, vui lòng thử lại sau");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -140,7 +153,7 @@ export default function Title() {
                   ? "border-rose-500 ring-2 ring-rose-100"
                   : charCount > maxLength
                   ? "border-red-500"
-                  : isValid
+                  : isValid && charCount > 0
                   ? "border-green-500"
                   : "border-gray-300"
               }`}
@@ -223,24 +236,35 @@ export default function Title() {
           whileHover={{ scale: 1.05, backgroundColor: "#f3f4f6" }}
           whileTap={{ scale: 0.95 }}
           onClick={handleBack}
+          disabled={isLoading}
         >
           Quay lại
         </motion.button>
         <motion.button
-          className={`px-6 py-3 bg-rose-500 text-white font-medium rounded-lg ${
-            !isValid && "opacity-70 cursor-not-allowed"
+          className={`px-6 py-3 bg-rose-500 text-white font-medium rounded-lg transition ${
+            !isValid || isLoading ? "opacity-70 cursor-not-allowed" : ""
           }`}
           whileHover={{
-            scale: isValid ? 1.05 : 1,
-            backgroundColor: isValid ? "#e11d48" : undefined,
+            scale: isValid && !isLoading ? 1.05 : 1,
+            backgroundColor: isValid && !isLoading ? "#e11d48" : undefined,
           }}
-          whileTap={{ scale: isValid ? 0.95 : 1 }}
-          disabled={!isValid}
+          whileTap={{ scale: isValid && !isLoading ? 0.95 : 1 }}
+          disabled={!isValid || isLoading}
           onClick={handleNext}
         >
-          Tiếp theo
+          {isLoading ? "Đang xử lý..." : "Tiếp theo"}
         </motion.button>
       </motion.div>
+
+      {error && (
+        <motion.div
+          className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {error}
+        </motion.div>
+      )}
     </div>
   );
 }

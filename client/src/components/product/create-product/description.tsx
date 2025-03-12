@@ -4,12 +4,35 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MdOutlineCabin, MdDescription } from "react-icons/md";
 import { FaLightbulb } from "react-icons/fa";
+import { title } from "process";
 
 export default function Description() {
   const router = useRouter();
   const [description, setDescription] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const maxLength = 500;
+
+  useEffect(() => {
+    try {
+      const savedDescription = localStorage.getItem("description");
+      if (savedDescription) {
+        const savedData = JSON.parse(savedDescription);
+        if (savedData.description) {
+          setDescription(savedData.description);
+          setIsComplete(true);
+        }
+      }
+    } catch (error) {
+      console.error("Get saved data error:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    setIsComplete(description.length > 0 && description.length <= maxLength);
+  }, [title]);
 
   // Tính số ký tự đã nhập
   const charCount = description.length;
@@ -66,9 +89,17 @@ export default function Description() {
   };
 
   const handleNext = () => {
-    if (isValid) {
+    if (!isValid) return;
+
+    // Lưu mô tả vào localStorage
+    try {
+      localStorage.setItem("description", JSON.stringify({ description }));
       // Lưu mô tả và chuyển trang
       router.push("/create/finish-setup");
+    } catch (error) {
+      console.error("Save data error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -184,27 +215,42 @@ export default function Description() {
       >
         <motion.button
           className="px-6 py-3 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition"
-          whileHover={{ scale: 1.05, backgroundColor: "#f3f4f6" }}
+          whileHover={{
+            scale: 1.05,
+            backgroundColor: "#f3f4f6",
+          }}
           whileTap={{ scale: 0.95 }}
+          disabled={isLoading}
           onClick={handleBack}
         >
           Quay lại
         </motion.button>
         <motion.button
           className={`px-6 py-3 bg-rose-500 text-white font-medium rounded-lg ${
-            !isValid || charCount < 50 ? "opacity-70 cursor-not-allowed" : ""
+            !isValid || isLoading ? "opacity-70 cursor-not-allowed" : ""
           }`}
           whileHover={{
-            scale: isValid && charCount >= 50 ? 1.05 : 1,
-            backgroundColor: isValid && charCount >= 50 ? "#e11d48" : undefined,
+            scale: isValid && !isLoading ? 1.05 : 1,
+            backgroundColor: isValid && !isLoading ? "#e11d48" : undefined,
           }}
-          whileTap={{ scale: isValid && charCount >= 50 ? 0.95 : 1 }}
-          disabled={!isValid || charCount < 50}
+          whileTap={{ scale: isValid && !isLoading ? 0.95 : 1 }}
+          disabled={!isValid || isLoading}
           onClick={handleNext}
         >
-          Tiếp theo
+          {isLoading ? "Đang xử lý..." : "Tiếp theo"}
         </motion.button>
       </motion.div>
+
+      {/* Error message */}
+      {error && (
+        <motion.div
+          className=" mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {error}
+        </motion.div>
+      )}
     </div>
   );
 }

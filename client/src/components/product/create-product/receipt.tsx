@@ -6,8 +6,14 @@ import Image from "next/image";
 import { FaCheck, FaCalendarAlt, FaClipboardList } from "react-icons/fa";
 import { MdOutlineCabin, MdPreview, MdEdit } from "react-icons/md";
 import { IoMdSettings } from "react-icons/io";
+import axios from "@/lib/axios";
+import Cookies from "js-cookie";
 
 export default function Receipt() {
+  // Các state liên quan đến submit
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const router = useRouter();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [productData, setProductData] = useState({
@@ -20,7 +26,7 @@ export default function Receipt() {
     bedrooms: 0,
     bathrooms: 0,
     images: [""],
-    isNew: true,
+    isNew: true, // Dữ liệu cục bộ, sẽ không gửi lên API
     livingRooms: 0,
     amenities: [],
   });
@@ -29,10 +35,25 @@ export default function Receipt() {
   useEffect(() => {
     // Lấy dữ liệu từ localStorage khi component mount
     try {
+      let priceValue = 0;
+      try {
+        const savedPriceData = localStorage.getItem("listing_price");
+        if (savedPriceData) {
+          const parsedPriceData = JSON.parse(savedPriceData);
+          priceValue = parsedPriceData.price
+            ? Number(parsedPriceData.price)
+            : 0;
+        }
+      } catch (e) {
+        console.error("Error parsing price data:", e);
+      }
+
       const data = {
-        title: localStorage.getItem("title") || "Nhà của bạn",
+        title: JSON.parse(
+          localStorage.getItem("title") || '{"title":"Nhà của bạn"}'
+        ).title,
         propertyType: localStorage.getItem("propertyType") || "Căn hộ",
-        price: Number(localStorage.getItem("price") || 0),
+        price: priceValue,
         discountedPrice: Number(localStorage.getItem("discountedPrice") || 0),
         location: JSON.parse(
           localStorage.getItem("location") ||
@@ -54,15 +75,12 @@ export default function Receipt() {
     }
   }, []);
 
-  // Animation variants
+  // Animation variants của framer-motion
   const containerVariant = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3,
-      },
+      transition: { staggerChildren: 0.1, delayChildren: 0.3 },
     },
   };
 
@@ -71,7 +89,7 @@ export default function Receipt() {
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300 } },
   };
 
-  // Format price as VND currency
+  // Hàm format tiền VND
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat("vi-VN").format(value);
   };
@@ -80,24 +98,113 @@ export default function Receipt() {
     router.push("/create/price");
   };
 
-  const handleNext = () => {
-    router.push("/create/publish-celebration");
+  // Hàm submit dữ liệu sản phẩm
+  const handleNext = async () => {
+    if (completedTasks < 4) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const userId = Cookies.get("userId");
+      const token = Cookies.get("token");
+
+      if (!userId || !token) {
+        throw new Error("Vui lòng đăng nhập để tiếp tục");
+      }
+
+      const description =
+        localStorage.getItem("description") || "Mô tả sẽ được cập nhật sau";
+
+      const productPayload = {
+        title: String(productData.title || "Nhà của bạn").trim(),
+        propertyType: String(productData.propertyType || "Căn hộ").trim(),
+        price: Number(productData.price) || 100000,
+        discountedPrice:
+          Number(productData.discountedPrice) ||
+          Number(productData.price) ||
+          100000,
+        location: {
+          address: String(productData.location.address || "").trim(),
+          city: String(productData.location.city || "").trim(),
+          country: String(productData.location.country || "Việt Nam").trim(),
+        },
+        beds: Number(productData.beds) || 1,
+        bedrooms: Number(productData.bedrooms) || 1,
+        bathrooms: Number(productData.bathrooms) || 1,
+        images: Array.isArray(productData.images)
+          ? productData.images.filter((img) => img && img.trim() !== "")
+          : [""],
+        livingRooms: Number(productData.livingRooms) || 1,
+        amenities: Array.isArray(productData.amenities)
+          ? productData.amenities
+          : [],
+        businessId: userId,
+        privacyType: "public",
+        description: String(description).trim(),
+      };
+
+      // Kiểm tra các trường bắt buộc
+      if (!productPayload.title) {
+        throw new Error("Tiêu đề là bắt buộc");
+      }
+
+      if (!productPayload.images || productPayload.images.length === 0) {
+        throw new Error("Ít nhất một hình ảnh là bắt buộc");
+      }
+
+      console.log("Submitting product data:", productPayload);
+
+      const response = await axios.post("/product", productPayload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("Product created successfully:", response.data);
+
+      // Xóa các key không cần thiết trong localStorage
+      const keysToKeep = ["token", "userId", "user"];
+      Object.keys(localStorage).forEach((key) => {
+        if (!keysToKeep.includes(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      router.push("/create/publish-celebration");
+    } catch (error: any) {
+      console.error("Failed to create product:", error);
+      let errorMessage = "Đã xảy ra lỗi khi tạo mục cho thuê";
+      if (error.response) {
+        console.log("Error response:", error.response.data);
+        errorMessage =
+          error.response.data.message ||
+          (Array.isArray(error.response.data.message)
+            ? error.response.data.message[0]
+            : "Lỗi máy chủ, vui lòng thử lại sau");
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setSubmitError(errorMessage);
+      setIsSubmitting(false);
+    }
   };
 
-  // Xử lý chỉnh sửa các trường
+  // Hàm chuyển hướng chỉnh sửa các phần
   const handleEdit = (section: string) => {
     switch (section) {
       case "title":
         router.push("/create/title");
         break;
       case "photos":
-        router.push("/create/photos");
+        router.push("/create/photo");
         break;
       case "price":
         router.push("/create/price");
         break;
       case "amenities":
-        router.push("/create/amenities");
+        router.push("/create/amenity");
         break;
       case "location":
         router.push("/create/location");
@@ -107,7 +214,7 @@ export default function Receipt() {
     }
   };
 
-  // Tính toán số lượng nhiệm vụ đã hoàn thành
+  // Tính số nhiệm vụ đã hoàn thành
   const completedTasks = [
     productData.images && productData.images.length >= 5,
     productData.price > 0,
@@ -144,12 +251,11 @@ export default function Receipt() {
           animate="show"
           className="w-full"
         >
-          {/* Listing preview card */}
+          {/* Card xem trước listing */}
           <motion.div
             variants={itemVariant}
             className="border border-gray-200 rounded-xl overflow-hidden shadow-md mb-10"
           >
-            {/* Header with property type */}
             <div className="bg-gray-50 p-4 flex items-center justify-between border-b">
               <div className="flex items-center">
                 <MdOutlineCabin className="text-2xl text-rose-500 mr-3" />
@@ -168,7 +274,6 @@ export default function Receipt() {
               </motion.button>
             </div>
 
-            {/* Listing preview - Sửa lại phần này với grid 2 cột */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
               {/* Ảnh bìa */}
               <div className="md:col-span-1 relative h-64 md:h-full">
@@ -204,7 +309,6 @@ export default function Receipt() {
                     </motion.button>
                   </div>
                 ) : (
-                  // Fallback nếu không có ảnh
                   <div className="h-full bg-gray-200 flex flex-col items-center justify-center">
                     <MdOutlineCabin className="text-6xl text-gray-400 mb-2" />
                     <span className="text-sm text-gray-500">Chưa có ảnh</span>
@@ -218,7 +322,7 @@ export default function Receipt() {
                 )}
               </div>
 
-              {/* Thông tin */}
+              {/* Thông tin chi tiết */}
               <div className="md:col-span-2 p-5">
                 <h2 className="font-medium text-xl mb-2">
                   {productData.title}
@@ -297,7 +401,7 @@ export default function Receipt() {
             </div>
           </motion.div>
 
-          {/* What's next section */}
+          {/* Phần "Tiếp theo là gì?" */}
           <motion.div variants={itemVariant} className="mb-10">
             <h2 className="text-xl font-semibold mb-4">Tiếp theo là gì?</h2>
 
@@ -345,7 +449,7 @@ export default function Receipt() {
             </div>
           </motion.div>
 
-          {/* Check list */}
+          {/* Danh sách kiểm tra */}
           <motion.div
             variants={itemVariant}
             className="mb-12 bg-gray-50 p-5 rounded-lg border border-gray-200"
@@ -457,7 +561,7 @@ export default function Receipt() {
         </motion.div>
       )}
 
-      {/* Buttons điều hướng */}
+      {/* Nút điều hướng */}
       <motion.div
         className="mt-8 w-full flex justify-between"
         initial={{ opacity: 0 }}
@@ -469,24 +573,47 @@ export default function Receipt() {
           whileHover={{ scale: 1.05, backgroundColor: "#f3f4f6" }}
           whileTap={{ scale: 0.95 }}
           onClick={handleBack}
+          disabled={isSubmitting}
         >
           Quay lại
         </motion.button>
         <motion.button
           className={`px-6 py-3 bg-rose-500 text-white font-medium rounded-lg ${
-            completedTasks < 4 ? "opacity-70" : ""
+            completedTasks < 4 || isSubmitting
+              ? "opacity-70 cursor-not-allowed"
+              : ""
           }`}
           whileHover={{
-            scale: completedTasks === 4 ? 1.05 : 1,
-            backgroundColor: completedTasks === 4 ? "#e11d48" : undefined,
+            scale: completedTasks === 4 && !isSubmitting ? 1.05 : 1,
+            backgroundColor:
+              completedTasks === 4 && !isSubmitting ? "#e11d48" : undefined,
           }}
-          whileTap={{ scale: completedTasks === 4 ? 0.95 : 1 }}
+          whileTap={{ scale: completedTasks === 4 && !isSubmitting ? 0.95 : 1 }}
           onClick={handleNext}
-          disabled={completedTasks < 4}
+          disabled={completedTasks < 4 || isSubmitting}
         >
-          {completedTasks === 4 ? "Xuất bản" : "Hoàn thành các mục còn thiếu"}
+          {isSubmitting ? (
+            <div className="flex items-center">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+              <span>Đang xử lý...</span>
+            </div>
+          ) : completedTasks === 4 ? (
+            "Xuất bản"
+          ) : (
+            "Hoàn thành các mục còn thiếu"
+          )}
         </motion.button>
       </motion.div>
+
+      {submitError && (
+        <motion.div
+          className="mt-4 p-3 bg-red-50 border border-red-100 text-red-600 rounded-lg text-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {submitError}
+        </motion.div>
+      )}
     </div>
   );
 }

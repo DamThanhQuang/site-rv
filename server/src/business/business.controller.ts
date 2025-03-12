@@ -11,4 +11,10 @@ export class BusinessController {
   findAll() {
     return this.businessService.findAll();
   }
+
+  @Get('products')
+  @Public()
+  getAllProducts() {
+    return this.businessService.findAllProducts();
+  }
 }

@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Business, BusinessDocument } from './schemas/business.schema';
@@ -55,6 +59,38 @@ export class BusinessService {
     } catch (error) {
       console.error('Error in findAll:', error);
       throw new InternalServerErrorException('Failed to fetch businesses');
+    }
+  }
+
+  async findAllProducts(): Promise<any> {
+    try {
+      const products = await this.productModel.find().lean();
+      if (!products || products.length === 0) {
+        return [];
+      }
+
+      // In your findAllProducts method
+      const formattedProducts = products.map((product) => ({
+        id: product._id.toString(),
+        title: product.title || product.title,
+        description: product.description || '',
+        price: product.price || 0,
+        image: product.image || 'https://via.placeholder.com/300x200',
+        location:
+          typeof product.location === 'object'
+            ? ` ${product.location.city || ''}, ${
+                product.location.country || ''
+              }`
+            : product.location || 'Long Biên, Hà Nội',
+        // status: product.status || 'Đang thực hiện',
+        // createdAt: product.createdAt,
+        // actionRequired:
+        //   product.needsAttention || product.actionRequired || false,
+      }));
+      return formattedProducts;
+    } catch (error) {
+      console.error('Error in findAllProducts:', error);
+      throw new InternalServerErrorException('Failed to fetch products');
     }
   }
 }

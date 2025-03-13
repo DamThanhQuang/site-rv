@@ -168,7 +168,7 @@ export default function List() {
                           </span>
                         )}
                         <Link
-                          href={`/host/listings/${product.id}`}
+                          href={`/host/dashboard/listing/${product.id}/details/photo-tour`}
                           className="block mt-2 text-sm px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 text-center transition-colors"
                         >
                           Chi tiết

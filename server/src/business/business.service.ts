@@ -4,10 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import { Business, BusinessDocument } from './schemas/business.schema';
 import { User, UserDocument } from '@/user/schemas/user.schema';
 import { Product, ProductDocument } from '@/product/schemas/product.schemas';
+import { UpdateProductDto } from '@/product/dto/update-product.dto';
 
 @Injectable()
 export class BusinessService {
@@ -91,6 +92,53 @@ export class BusinessService {
     } catch (error) {
       console.error('Error in findAllProducts:', error);
       throw new InternalServerErrorException('Failed to fetch products');
+    }
+  }
+
+  async getDetailProduct(id: string): Promise<any> {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException(`Invalid product id: ${id}`);
+    }
+    try {
+      const product = await this.productModel.findById(new Types.ObjectId(id));
+      if (!product) {
+        throw new NotFoundException(`Product not found with id: ${id}`);
+      }
+      return product;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Error in detailProduct:', error);
+      throw new InternalServerErrorException('Failed to fetch product');
+    }
+  }
+
+  async updateProduct(
+    id: string,
+    updateProductDto: UpdateProductDto,
+  ): Promise<any> {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException(`Invalid product id: ${id}`);
+    }
+    try {
+      const product = await this.productModel
+        .findByIdAndUpdate(
+          new Types.ObjectId(id),
+          { $set: updateProductDto },
+          { new: true },
+        )
+        .exec();
+      if (!product) {
+        throw new NotFoundException(`Product not found with id: ${id}`);
+      }
+      return product;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Error in updateProduct:', error);
+      throw new InternalServerErrorException('Failed to update product');
     }
   }
 }

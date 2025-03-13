@@ -18,9 +18,12 @@ export default function DashboardLayout({
       <HostHeader />
 
       <div className="flex-1 bg-gray-50">
-        <div className="container mx-auto px-4 py-8">
+        <div>
+          {" "}
+          {/* className="container mx-auto px-4 py-8" */}
           {/* Main content container */}
-          <div className=" shadow-sm p-6">{children}</div>
+          {/* className=" shadow-sm p-6" */}
+          <div>{children}</div>
         </div>
       </div>
     </div>

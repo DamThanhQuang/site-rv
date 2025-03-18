@@ -1,8 +1,15 @@
+import { IsNotEmpty, IsString } from 'class-validator';
+
 export class UpdateProductDto {
+  @IsString()
+  @IsNotEmpty()
   title: string;
   description: string;
   price: number;
+
+  @IsNotEmpty()
   images: string[];
+
   propertyType: string;
   location: {
     address: string;

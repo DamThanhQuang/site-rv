@@ -6,19 +6,25 @@ import { useRouter, usePathname } from "next/navigation";
 import PhotoTour from "../photo-tour";
 import Title from "../title";
 import { motion, AnimatePresence } from "framer-motion";
+import AdditionalPhoto from "../additional-photo";
+import PropertyType from "../property-type";
 
 export default function ListingSetup() {
   const router = useRouter();
   const pathname = usePathname();
   const [activeContent, setActiveContent] = useState("photo-tour");
 
-  // Extract listing ID from pathname
-  const listingId = pathname.split("/")[4]; // Assuming path format is /host/dashboard/listing/[id]/...
+  // Trích xuất ID từ URL một cách an toàn hơn
+  const pathSegments = pathname ? pathname.split("/") : [];
+  const listingId = pathSegments.length > 4 ? pathSegments[4] : null;
 
   useEffect(() => {
-    // Determine active content from pathname
-    if (pathname.includes("/details/title")) {
+    if (pathname && pathname.includes("/details/title")) {
       setActiveContent("title");
+    } else if (pathname && pathname.includes("/details/property-type")) {
+      setActiveContent("property-type");
+    } else if (pathname && pathname.includes("/details/additional-photos")) {
+      setActiveContent("additional-photos");
     } else {
       setActiveContent("photo-tour");
     }
@@ -29,6 +35,8 @@ export default function ListingSetup() {
       router.push(`/host/dashboard/listing/${listingId}/details/photo-tour`);
     } else if (contentType === "title") {
       router.push(`/host/dashboard/listing/${listingId}/details/title`);
+    } else if (contentType === "property-type") {
+      router.push(`/host/dashboard/listing/${listingId}/details/property-type`);
     }
     setActiveContent(contentType);
   };
@@ -36,20 +44,41 @@ export default function ListingSetup() {
   const renderRightContent = () => {
     switch (activeContent) {
       case "photo-tour":
-        return <PhotoTour />;
+        return (
+          <PhotoTour
+            onNavigate={(url: string) => {
+              if (url === "/additional-photos") {
+                handleContentChange("additional-photos");
+              } else {
+                router.push(url);
+              }
+            }}
+          />
+        );
       case "title":
         return <Title />;
+      case "additional-photos":
+        return (
+          <AdditionalPhoto
+            onBack={() => handleContentChange("photo-tour")}
+            listingId={listingId}
+            productTitle="Product Title" // Add a default title or fetch it from your state/props
+          />
+        );
+      case "property-type":
+        return <PropertyType />;
+
       default:
-        return <PhotoTour />;
+        return <PhotoTour onNavigate={(url: string) => router.push(url)} />;
     }
   };
 
   return (
     <div className="min-h-screen bg-white">
       {/* Main Content */}
-      <div className="flex">
-        {/* Left Sidebar - This remains constant */}
-        <div className="w-1/3 max-w-md border-r border-gray-200 p-6">
+      <div className="flex flex-col md:flex-row">
+        {/* Left Sidebar */}
+        <div className="w-full md:w-1/3 max-w-md border-b md:border-b-0 md:border-r border-gray-200 p-6">
           <div>
             <Link
               href="/listing"
@@ -72,7 +101,7 @@ export default function ListingSetup() {
             </Link>
 
             <div className="mb-8">
-              <div className="flex space-x-2 mb-4">
+              <div className="flex flex-col sm:flex-row gap-2 mb-4">
                 <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
@@ -144,7 +173,7 @@ export default function ListingSetup() {
                 </div>
               </motion.div>
 
-              {/* Photo Tour section - Clickable */}
+              {/* Photo Tour Section */}
               <motion.div
                 className="border border-gray-200 rounded-lg p-4 mb-4 cursor-pointer"
                 onClick={() => handleContentChange("photo-tour")}
@@ -165,8 +194,9 @@ export default function ListingSetup() {
                         <Image
                           src="https://a0.muscache.com/im/pictures/miso/Hosting-1371412356785196440/original/138d58a6-d4b6-4dd3-9555-123af2583d87.jpeg?im_w=240"
                           alt="Property view"
-                          layout="fill"
-                          objectFit="cover"
+                          fill
+                          sizes="128px"
+                          style={{ objectFit: "cover" }}
                           className="rounded-l-lg"
                         />
                         <div className="absolute top-2 left-2 bg-white bg-opacity-80 text-xs px-2 py-1 rounded">
@@ -177,8 +207,9 @@ export default function ListingSetup() {
                         <Image
                           src="https://a0.muscache.com/im/pictures/miso/Hosting-1371412356785196440/original/138d58a6-d4b6-4dd3-9555-123af2583d87.jpeg?im_w=240"
                           alt="Another view"
-                          layout="fill"
-                          objectFit="cover"
+                          fill
+                          sizes="128px"
+                          style={{ objectFit: "cover" }}
                           className="rounded-r-lg"
                         />
                       </div>
@@ -187,17 +218,16 @@ export default function ListingSetup() {
                 </div>
               </motion.div>
 
-              {/* Title section - Clickable */}
+              {/* Title Section */}
               <motion.div
-                className="border border-gray-200 rounded-lg p-4 cursor-pointer"
+                className="border border-gray-200 rounded-lg p-4 mb-4 cursor-pointer"
                 onClick={() => handleContentChange("title")}
                 whileHover={{
                   backgroundColor: "rgba(0,0,0,0.02)",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                 }}
               >
-                <h3 className="text-sm font-medium text-gray-500">Tiêu đề</h3>
-                <p className="mt-1">asdasdasd</p>
+                <h3 className="font-medium mb-2">Tiêu đề</h3>
                 <motion.button
                   className="mt-4 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm"
                   whileHover={{ scale: 1.05 }}
@@ -206,15 +236,30 @@ export default function ListingSetup() {
                   Xem
                 </motion.button>
               </motion.div>
+
+              {/* Property Type Section */}
+              <motion.div
+                className="border border-gray-200 rounded-lg p-4 cursor-pointer"
+                onClick={() => handleContentChange("property-type")}
+                whileHover={{
+                  backgroundColor: "rgba(0,0,0,0.02)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                }}
+              >
+                <h3 className="font-medium mb-2">Loại chỗ ở</h3>
+                <h3 className="text-sm font-medium text-gray-500">
+                  Toàn bộ nhà - Nhà
+                </h3>
+              </motion.div>
             </div>
           </div>
         </div>
 
-        {/* Right Content with smooth transitions */}
+        {/* Right Content with Smooth Transitions */}
         <AnimatePresence mode="wait">
           <motion.div
             key={activeContent}
-            className="w-2/3 p-6"
+            className="w-full md:w-2/3 p-6"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}

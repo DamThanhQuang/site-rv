@@ -9,6 +9,7 @@ import { Business, BusinessDocument } from './schemas/business.schema';
 import { User, UserDocument } from '@/user/schemas/user.schema';
 import { Product, ProductDocument } from '@/product/schemas/product.schemas';
 import { UpdateProductDto } from '@/product/dto/update-product.dto';
+import { UpdatePropertyProductDto } from '@/product/dto/update-property-product.dto';
 
 @Injectable()
 export class BusinessService {
@@ -139,6 +140,34 @@ export class BusinessService {
       }
       console.error('Error in updateProduct:', error);
       throw new InternalServerErrorException('Failed to update product');
+    }
+  }
+
+  async updatePropertyProduct(
+    id: string,
+    updatePropertyProductDto: UpdatePropertyProductDto,
+  ): Promise<any> {
+    if (!isValidObjectId) {
+      throw new NotFoundException(`Invalid product id: ${id}`);
+    }
+    try {
+      const product = await this.productModel.findByIdAndUpdate(
+        new Types.ObjectId(id),
+        { $set: updatePropertyProductDto },
+        { new: true },
+      );
+      if (!product) {
+        throw new NotFoundException(`Product not found with id: ${id}`);
+      }
+      return product;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Error in updatePropertyProduct:', error);
+      throw new InternalServerErrorException(
+        'Failed to update property product',
+      );
     }
   }
 }

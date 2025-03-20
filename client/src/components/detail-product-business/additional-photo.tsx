@@ -6,6 +6,8 @@ import axios from "@/lib/axios";
 import { isAxiosError } from "axios";
 import { toast } from "react-hot-toast";
 import { useParams } from "next/navigation";
+import { projectTraceSource } from "next/dist/build/swc/generated-native";
+import { title } from "process";
 
 interface AdditionalPhotoProps {
   onBack: () => void;
@@ -23,6 +25,10 @@ const AdditionalPhoto = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    [key: string]: number;
+  }>({});
+  const [overallProgress, setOverallProgress] = useState(0);
 
   // Tạo URL xem trước cho file đã chọn
   useEffect(() => {
@@ -44,51 +50,122 @@ const AdditionalPhoto = ({
     setSelectedFiles(filesArray);
   };
 
-  // Upload ảnh cùng với title lên API
-  const handleUpload = async () => {
-    if (!listingId) {
-      toast.error("Missing listing ID");
-      return;
-    }
-    if (selectedFiles.length === 0) {
-      toast.error("Vui lòng chọn ít nhất một ảnh.");
-      return;
-    }
+  // Hàm upload từng file lên S3 qua pre-signed URL
+  const upLoadFileToS3 = async (file: File): Promise<string> => {
     try {
-      setUploading(true);
-      const formData = new FormData();
-      // Gửi title (đảm bảo không để trống và là chuỗi)
-      formData.append("title", productTitle);
-      // Gửi ảnh với key "images" (theo yêu cầu của API)
-      selectedFiles.forEach((file) => {
-        formData.append("images", file);
+      // Khởi tạo tiến trình cho file này
+      setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
+
+      // Lấy pre-signed URL từ backend (NestJS)
+      const res = await axios.post("/s3/presigned-url", {
+        filename: file.name,
+        contentType: file.type,
       });
 
-      const response = await axios.put(
-        `/business/update-product/${params.id}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+      console.log("Response data:", res.data);
+
+      const data = res.data;
+      const { url: presignedUrl, key } = data;
+
+      // Upload file với theo dõi tiến trình
+      const xhr = new XMLHttpRequest();
+
+      // Cập nhật tiến trình
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round(
+            (event.loaded / event.total) * 100
+          );
+          // Cập nhật tiến trình cho file cụ thể
+          setUploadProgress((prev) => ({
+            ...prev,
+            [file.name]: percentComplete,
+          }));
+
+          // Tính toán tiến trình tổng thể
+          const values = Object.values({
+            ...uploadProgress,
+            [file.name]: percentComplete,
+          });
+          const average = values.reduce((a, b) => a + b, 0) / values.length;
+          setOverallProgress(Math.round(average));
         }
-      );
-      toast.success("Upload ảnh thành công");
-      // Reset lại danh sách file sau khi upload
-      setSelectedFiles([]);
+      };
+
+      // Tạo promise để theo dõi hoàn thành
+      return new Promise((resolve, reject) => {
+        xhr.open("PUT", presignedUrl);
+        xhr.setRequestHeader("Content-Type", file.type);
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const bucket =
+              process.env.NEXT_PUBLIC_S3_BUCKET || "site-review-image-2025";
+            const region =
+              process.env.NEXT_PUBLIC_AWS_REGION || "ap-southeast-1";
+            const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+
+            // Đánh dấu tiến trình là 100%
+            setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }));
+            resolve(s3Url);
+          } else {
+            reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error("Network error during upload"));
+        };
+
+        xhr.send(file);
+      });
     } catch (error) {
       console.error("Upload error:", error);
+      throw error;
+    }
+  };
+
+  // Hàm upload tất cả ảnh được chọn
+  const handleUpload = async () => {
+    if (!listingId) {
+      toast.error("Không tìm thấy ID sản phẩm");
+      return;
+    }
+
+    if (selectedFiles.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một ảnh");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      // Tạo mảng promises để upload tất cả file cùng lúc
+      const uploadPromises = selectedFiles.map((file) => upLoadFileToS3(file));
+
+      // Thực hiện tất cả uploads cùng lúc
+      toast.loading(`Đang tải ảnh lên... ${selectedFiles.length} `);
+      const uploadedUrls = await Promise.all(uploadPromises);
+
+      console.log("Tất cả URLs đã upload:", uploadedUrls);
+
+      await axios.put(`/business/update-product/${params.id}`, {
+        title: productTitle,
+        images: uploadedUrls,
+      });
+      toast.dismiss();
+      toast.success("Tải ảnh lên thành công");
+      // Cập nhật lại danh sách ảnh đã upload
+      setSelectedFiles([]);
+      setPreviews([]);
+      // Gọi lại hàm onBack để trở về trang trước
+      onBack();
+    } catch (error) {
+      toast.dismiss();
+      console.error("Lỗi khi tải ảnh lên:", error);
       if (isAxiosError(error) && error.response) {
-        console.error("Server response:", error.response.data);
-        toast.error(
-          `Upload failed: ${
-            Array.isArray(error.response.data.message)
-              ? error.response.data.message.join(", ")
-              : error.response.data.message || "Please check file requirements"
-          }`
-        );
+        toast.error(`Lỗi từ server: ${error.response.data.message}`);
       } else {
-        toast.error("Có lỗi khi upload ảnh");
+        toast.error("Có lỗi xảy ra trong quá trình tải ảnh lên");
       }
     } finally {
       setUploading(false);
@@ -190,6 +267,37 @@ const AdditionalPhoto = ({
       >
         {uploading ? "Đang cập nhật..." : "Cập nhật ảnh"}
       </motion.button>
+
+      {/* Hiển thị tiến trình tổng thể */}
+      {uploading && (
+        <div className="mt-4">
+          <p className="text-sm font-medium mb-1">
+            Tiến trình tải lên: {overallProgress}%
+          </p>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className="bg-blue-600 h-2.5 rounded-full"
+              style={{ width: `${overallProgress}%` }}
+            ></div>
+          </div>
+
+          {/* Hiển thị tiến trình từng file */}
+          <div className="mt-2 space-y-2">
+            {Object.entries(uploadProgress).map(([filename, progress]) => (
+              <div key={filename} className="flex items-center">
+                <span className="text-xs truncate w-48">{filename}</span>
+                <div className="flex-1 ml-2 bg-gray-200 rounded-full h-1.5">
+                  <div
+                    className="bg-green-500 h-1.5 rounded-full"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+                <span className="ml-2 text-xs">{progress}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

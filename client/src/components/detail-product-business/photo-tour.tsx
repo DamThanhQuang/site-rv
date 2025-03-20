@@ -10,16 +10,69 @@ interface PhotoTourResponse {
   images: string[]; // API trả về mảng URL ảnh
 }
 
+// Hàm kiểm tra URL hợp lệ - cải tiến để hỗ trợ URL từ S3
+const isValidImageUrl = (url: string): boolean => {
+  if (!url) return false;
+  if (url.includes("undefined")) return false;
+
+  // Xác nhận đây là URL hợp lệ từ S3
+  const isS3Url = url.includes("s3.") && url.includes("amazonaws.com");
+
+  try {
+    new URL(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Cải tiến hàm fetchImages để xử lý cụ thể cho ảnh từ S3
 const fetchImages = async (id: string): Promise<PhotoTourResponse> => {
   try {
     const token = Cookies.get("token");
-    console.log("Token:", token);
+    console.log("Đang tải ảnh với ID:", id);
+
     const response = await axios.get(`/business/detail-product/${id}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.data;
+
+    console.log("Response API:", response.data);
+
+    // Kiểm tra cấu trúc dữ liệu
+    if (!response.data || !response.data.images) {
+      console.warn("API không trả về dữ liệu images hợp lệ");
+      return { images: [] };
+    }
+
+    // Khảo sát cấu trúc dữ liệu
+    console.log(
+      "Cấu trúc của images:",
+      Array.isArray(response.data.images)
+        ? "Là mảng"
+        : typeof response.data.images
+    );
+
+    // Nếu images không phải mảng, thử chuyển đổi
+    let images = response.data.images;
+    if (!Array.isArray(images)) {
+      try {
+        if (typeof images === "string") {
+          images = JSON.parse(images);
+        } else {
+          images = [];
+        }
+      } catch (error) {
+        console.error("Không thể parse dữ liệu images:", error);
+        images = [];
+      }
+    }
+
+    // Log để debug
+    console.log("Danh sách URLs:", images);
+
+    return { images };
   } catch (error) {
     console.error("Error fetching images:", error);
     throw error;
@@ -37,17 +90,37 @@ export default function PhotoTour({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Lấy listingId từ URL (điều chỉnh chỉ số nếu cần)
+  // Lấy listingId từ URL
   const listingId = pathname.split("/")[4];
 
   useEffect(() => {
     const id = params.id as string;
-    if (!id) return;
+    if (!id) {
+      setLoading(false);
+      setError("Không tìm thấy ID");
+      return;
+    }
+
     fetchImages(id)
       .then((data) => {
-        setImages(data.images || []);
+        // Lọc bỏ các URL không hợp lệ
+        const validImages = (data.images || []).filter(isValidImageUrl);
+
+        console.log("Tổng số ảnh từ API:", data.images?.length || 0);
+        console.log("Số ảnh hợp lệ:", validImages.length);
+
+        if (validImages.length === 0) {
+          console.log("Không có ảnh nào hợp lệ từ API");
+        } else {
+          console.log("URL ảnh đầu tiên:", validImages[0]);
+        }
+
+        setImages(validImages);
       })
-      .catch(() => setError("Lỗi khi tải ảnh"))
+      .catch((err) => {
+        console.error("Lỗi khi tải ảnh:", err);
+        setError("Lỗi khi tải ảnh");
+      })
       .finally(() => setLoading(false));
   }, [params.id]);
 
@@ -90,23 +163,35 @@ export default function PhotoTour({
             className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4"
           >
             <AnimatePresence>
-              {images.map((src, index) => (
-                <motion.div
-                  key={`${src}-${index}`}
-                  variants={cardVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  className="relative aspect-square rounded-lg overflow-hidden border border-gray-200"
-                >
-                  <Image
-                    src={src}
-                    alt={`Ảnh ${index + 1}`}
-                    fill
-                    className="object-cover"
-                  />
-                </motion.div>
-              ))}
+              {images.map((src, index) => {
+                // Thêm kiểm tra lần cuối
+                if (!isValidImageUrl(src)) {
+                  console.log(`Bỏ qua ảnh không hợp lệ: ${src}`);
+                  return null;
+                }
+
+                return (
+                  <motion.div
+                    key={`${src}-${index}`}
+                    variants={cardVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    className="relative aspect-square rounded-lg overflow-hidden border border-gray-200"
+                  >
+                    <Image
+                      src={src}
+                      alt={`Ảnh ${index + 1}`}
+                      fill
+                      className="object-cover"
+                      // Thêm xử lý lỗi khi ảnh không tải được
+                      onError={() => {
+                        console.error(`Lỗi tải ảnh: ${src}`);
+                      }}
+                    />
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </motion.div>
         ) : (

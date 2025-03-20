@@ -63,6 +63,9 @@ export class Product {
   @Prop({ required: true })
   bathrooms: number;
 
+  @Prop({ type: Types.ObjectId, ref: 'Property' })
+  propertyId: Types.ObjectId;
+
   // Amenities
   @Prop({ type: [String], default: [] })
   amenities: string[];

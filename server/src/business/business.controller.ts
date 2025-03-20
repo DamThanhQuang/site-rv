@@ -3,6 +3,7 @@ import { BusinessService } from './business.service';
 import { Public } from '@/auth/decorators/customs.decorator';
 import { Types } from 'mongoose';
 import { UpdateProductDto } from '@/product/dto/update-product.dto';
+import { UpdatePropertyProductDto } from '@/product/dto/update-property-product.dto';
 
 @Controller('business')
 export class BusinessController {
@@ -42,6 +43,22 @@ export class BusinessController {
     return this.businessService.updateProduct(
       objectId.toString(),
       updateProductDto,
+    );
+  }
+
+  @Put('update-property-product/:id')
+  @Public()
+  updatePropertyProduct(
+    @Param('id') id: string,
+    @Body() updatePropertyProductDto: UpdatePropertyProductDto,
+  ) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new Error(`Invalid ObjectId format: ${id}`);
+    }
+    const objectId = new Types.ObjectId(id);
+    return this.businessService.updatePropertyProduct(
+      objectId.toString(),
+      updatePropertyProductDto,
     );
   }
 }

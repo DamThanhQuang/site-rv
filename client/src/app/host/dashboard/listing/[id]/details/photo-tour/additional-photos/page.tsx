@@ -19,7 +19,11 @@ export default function AdditionalPhotoPage() {
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <AdditionalPhoto onBack={handleBack} listingId={listingId} />
+      <AdditionalPhoto
+        onBack={handleBack}
+        listingId={listingId}
+        productTitle="Property Title"
+      />
     </motion.div>
   );
 }

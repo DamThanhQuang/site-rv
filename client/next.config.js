@@ -1,8 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
   images: {
-    domains: ['a0.muscache.com'],
+    domains: [
+      'site-review-image-2025.s3.amazonaws.com',
+      'site-review-image-2025.s3.ap-southeast-1.amazonaws.com',
+      'a0.muscache.com',
+      'undefined.s3.amazonaws.com'
+    ],
   },
 };
 

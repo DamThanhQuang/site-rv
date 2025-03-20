@@ -10,6 +10,7 @@ import { JwtAuthGuard } from './auth/passport/jwt-auth.guard';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ProductModule } from './product/product.module';
 import { BusinessModule } from './business/business.module';
+import { S3Module } from './aws/s3.module';
 
 @Module({
   imports: [
@@ -23,12 +24,13 @@ import { BusinessModule } from './business/business.module';
       }),
       inject: [ConfigService],
     }),
+    S3Module,
     AuthModule,
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         transport: {
-          host: "smtp.gmail.com",
+          host: 'smtp.gmail.com',
           port: 465,
           secure: false,
           auth: {

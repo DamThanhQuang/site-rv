@@ -1,21 +1,96 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
+import axios from "@/lib/axios";
+
+interface Listing {
+  id: string;
+  location: {
+    city: string;
+    country: string;
+  };
+  rating: number;
+  type: string;
+  date: string;
+  price: string;
+  images: string[];
+  isLiked: boolean;
+}
 
 export default function Home() {
-  const [isFavorite, setIsFavorite] = useState<Record<number, boolean>>({});
-  // Lưu trữ index ảnh hiện tại của từng listing theo id
-  const [imageIndices, setImageIndices] = useState<Record<number, number>>({});
+  const router = useRouter();
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState<Record<string, boolean>>({});
+  const [imageIndices, setImageIndices] = useState<Record<string, number>>({});
 
-  const toggleFavorite = (id: number) => {
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get("/product/get-all-product");
+
+        if (response.status < 200 || response.status >= 300) {
+          throw new Error("Failed to fetch products");
+        }
+
+        const data = response.data;
+        console.log("Fetched products:", data);
+        console.log("Dữ liệu API nhận được:", data);
+        console.log("Kiểu dữ liệu:", typeof data);
+
+        const formattedData = data.map((item: any) => ({
+          id: item._id,
+          location: {
+            city: item.location.city,
+            country: item.location.country,
+          },
+          rating: item.rating,
+          type: item.type,
+          date: item.date,
+          price: item.price,
+          images: item.images.map((img: string) => img), // Chuyển đổi thành mảng URL
+          isLiked: item.isLiked || false, // Đảm bảo có thuộc tính isLiked
+        }));
+
+        if (Array.isArray(data)) {
+          console.log("Số lượng sản phẩm:", data.length);
+          data.forEach((item, index) => {
+            console.log(`Sản phẩm ${index}:`, item);
+            console.log(`ID của sản phẩm ${index}:`, item.id);
+          });
+        }
+        setListings(data);
+
+        // Initialize favorites from API data
+        const favoritesMap: Record<string, boolean> = {};
+        data.forEach((item: Listing) => {
+          favoritesMap[item.id] = item.isLiked;
+        });
+        setIsFavorite(favoritesMap);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+        console.error("Error fetching products:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Cập nhật các hàm để xử lý id dạng string
+  const toggleFavorite = (id: string) => {
     setIsFavorite((prev) => ({
       ...prev,
       [id]: !prev[id],
     }));
   };
 
-  // Hàm chuyển sang ảnh kế tiếp, nếu vượt quá độ dài mảng thì quay về 0
-  const handleNextImage = (listingId: number, imagesLength: number) => {
+  const handleNextImage = (listingId: string, imagesLength: number) => {
     setImageIndices((prev) => {
       const currentIndex = prev[listingId] || 0;
       const nextIndex = (currentIndex + 1) % imagesLength;
@@ -26,8 +101,7 @@ export default function Home() {
     });
   };
 
-  // Hàm chuyển sang ảnh trước, nếu dưới 0 thì quay lại ảnh cuối cùng
-  const handlePrevImage = (listingId: number, imagesLength: number) => {
+  const handlePrevImage = (listingId: string, imagesLength: number) => {
     setImageIndices((prev) => {
       const currentIndex = prev[listingId] || 0;
       const prevIndex = (currentIndex - 1 + imagesLength) % imagesLength;
@@ -38,117 +112,91 @@ export default function Home() {
     });
   };
 
-  const listings = [
-    {
-      id: 1,
-      location: "Na Chom Thian, Thái Lan",
-      rating: 4.82,
-      type: "Bãi biển Jomtien",
-      date: "19 - 24 tháng 3",
-      price: "₫2.160.361",
-      images: [
-        "https://a0.muscache.com/im/ml/photo_enhancement/pictures/a31ffa2d-a252-4e5e-ad37-207a78c98393.jpg?im_w=720",
-        "https://a0.muscache.com/im/pictures/106fa744-3428-4630-85f9-750c1693d906.jpg?im_w=1200",
-        "https://a0.muscache.com/im/pictures/hosting/Hosting-624118095084414409/original/dd43da64-5a56-4bc6-b82b-04f7cab91d9a.jpeg?im_w=720",
-      ],
-      isLiked: true,
-    },
-    {
-      id: 2,
-      location: "Thành phố Hạ Long, Việt Nam",
-      rating: 4.97,
-      type: "Cách 131 km",
-      date: "10 - 15 tháng 4",
-      price: "₫829.045",
-      images: [
-        "https://a0.muscache.com/im/ml/photo_enhancement/pictures/a31ffa2d-a252-4e5e-ad37-207a78c98393.jpg?im_w=720",
-        "https://a0.muscache.com/im/pictures/106fa744-3428-4630-85f9-750c1693d906.jpg?im_w=1200",
-        "https://a0.muscache.com/im/pictures/hosting/Hosting-624118095084414409/original/dd43da64-5a56-4bc6-b82b-04f7cab91d9a.jpeg?im_w=720",
-      ],
-      isLiked: false,
-    },
-    {
-      id: 33,
-      location: "Thành phố Hạ Long, Việt Nam",
-      rating: 4.97,
-      type: "Cách 131 km",
-      date: "10 - 15 tháng 4",
-      price: "₫829.045",
-      images: [
-        "https://a0.muscache.com/im/ml/photo_enhancement/pictures/a31ffa2d-a252-4e5e-ad37-207a78c98393.jpg?im_w=720",
-        "https://a0.muscache.com/im/pictures/106fa744-3428-4630-85f9-750c1693d906.jpg?im_w=1200",
-        "https://a0.muscache.com/im/pictures/hosting/Hosting-624118095084414409/original/dd43da64-5a56-4bc6-b82b-04f7cab91d9a.jpeg?im_w=720",
-      ],
-      isLiked: false,
-    },
-    {
-      id: 4,
-      location: "Thành phố Hạ Long, Việt Nam",
-      rating: 4.97,
-      type: "Cách 131 km",
-      date: "10 - 15 tháng 4",
-      price: "₫829.045",
-      images: [
-        "https://a0.muscache.com/im/ml/photo_enhancement/pictures/a31ffa2d-a252-4e5e-ad37-207a78c98393.jpg?im_w=720",
-        "https://a0.muscache.com/im/pictures/106fa744-3428-4630-85f9-750c1693d906.jpg?im_w=1200",
-        "https://a0.muscache.com/im/pictures/hosting/Hosting-624118095084414409/original/dd43da64-5a56-4bc6-b82b-04f7cab91d9a.jpeg?im_w=720",
-      ],
-      isLiked: false,
-    },
-    {
-      id: 5,
-      location: "Thành phố Hạ Long, Việt Nam",
-      rating: 4.97,
-      type: "Cách 131 km",
-      date: "10 - 15 tháng 4",
-      price: "₫829.045",
-      images: [
-        "https://a0.muscache.com/im/ml/photo_enhancement/pictures/a31ffa2d-a252-4e5e-ad37-207a78c98393.jpg?im_w=720",
-        "https://a0.muscache.com/im/pictures/106fa744-3428-4630-85f9-750c1693d906.jpg?im_w=1200",
-        "https://a0.muscache.com/im/pictures/hosting/Hosting-624118095084414409/original/dd43da64-5a56-4bc6-b82b-04f7cab91d9a.jpeg?im_w=720",
-      ],
-      isLiked: false,
-    },
-    {
-      id: 6,
-      location: "Thành phố Hạ Long, Việt Nam",
-      rating: 4.97,
-      type: "Cách 131 km",
-      date: "10 - 15 tháng 4",
-      price: "₫829.045",
-      images: [
-        "https://a0.muscache.com/im/ml/photo_enhancement/pictures/a31ffa2d-a252-4e5e-ad37-207a78c98393.jpg?im_w=720",
-        "https://a0.muscache.com/im/pictures/106fa744-3428-4630-85f9-750c1693d906.jpg?im_w=1200",
-        "https://a0.muscache.com/im/pictures/hosting/Hosting-624118095084414409/original/dd43da64-5a56-4bc6-b82b-04f7cab91d9a.jpeg?im_w=720",
-      ],
-      isLiked: false,
-    },
-  ];
+  const navigateToDetail = (id: string) => {
+    if (!id) {
+      console.error("Không thể chuyển trang: ID sản phẩm không xác định");
+      return;
+    }
+    console.log("Đang chuyển đến sản phẩm:", id);
+    router.push(`/product-detail/${id}`);
+  };
+
+  // Display loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center h-96">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-t-blue-500 border-b-blue-500 border-r-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Display error state
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center h-96">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">
+            ⚠️ Lỗi khi tải dữ liệu
+          </div>
+          <p className="text-gray-600">{error}</p>
+          <button
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            onClick={() => window.location.reload()}
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {listings.map((listing) => {
+            // Thêm log cho mỗi listing
+            console.log(`Render sản phẩm:`, listing);
+            console.log(`ID sản phẩm:`, listing.id);
+
             const currentIndex = imageIndices[listing.id] || 0;
             return (
-              <div key={listing.id} className="relative">
+              <motion.div
+                key={listing.id}
+                className="relative cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                onClick={() => navigateToDetail(listing.id)}
+              >
                 {/* Carousel */}
                 <div className="relative rounded-xl overflow-hidden aspect-square group">
-                  <div className="w-full h-full">
-                    <Image
-                      src={listing.images[currentIndex]}
-                      alt={listing.location}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className="hover:opacity-95 transition object-cover"
-                    />
-                  </div>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentIndex}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.5 }}
+                      className="w-full h-full"
+                    >
+                      <Image
+                        src={listing.images[currentIndex]}
+                        alt={`${listing.location.city}, ${listing.location.country}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="hover:opacity-95 transition object-cover"
+                      />
+                    </motion.div>
+                  </AnimatePresence>
                   {/* Nút carousel prev */}
                   <button
-                    onClick={() =>
-                      handlePrevImage(listing.id, listing.images.length)
-                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrevImage(listing.id, listing.images.length);
+                    }}
                     className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition"
                   >
                     <svg
@@ -168,9 +216,10 @@ export default function Home() {
                   </button>
                   {/* Nút carousel next */}
                   <button
-                    onClick={() =>
-                      handleNextImage(listing.id, listing.images.length)
-                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNextImage(listing.id, listing.images.length);
+                    }}
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition"
                   >
                     <svg
@@ -191,7 +240,10 @@ export default function Home() {
                   {/* Like button */}
                   <button
                     className="absolute top-3 right-3 p-1 z-10 text-white"
-                    onClick={() => toggleFavorite(listing.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(listing.id);
+                    }}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -220,7 +272,7 @@ export default function Home() {
                   <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
                     {listing.images.map((_, index) => (
                       <div
-                        key={index}
+                        key={`${listing.id}-${index}`} // Sử dụng key kết hợp để đảm bảo tính duy nhất
                         className={`h-1.5 w-1.5 rounded-full ${
                           index === currentIndex ? "bg-white" : "bg-white/50"
                         }`}
@@ -232,7 +284,7 @@ export default function Home() {
                 <div className="mt-2">
                   <div className="flex justify-between">
                     <h3 className="font-medium text-base">
-                      {listing.location}
+                      {listing.location.city}, {listing.location.country}
                     </h3>
                     <div className="flex items-center">
                       <svg
@@ -257,7 +309,7 @@ export default function Home() {
                     <span className="text-gray-500"> / đêm</span>
                   </p>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

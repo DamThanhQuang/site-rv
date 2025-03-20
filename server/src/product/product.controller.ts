@@ -21,4 +21,16 @@ export class ProductController {
     console.log('Adding review for product:', addReviewDto);
     return this.productService.addReview(addReviewDto);
   }
+  @Get('get-all-product')
+  @Public()
+  async getAllProduct() {
+    return this.productService.findAll();
+  }
+
+  @Get('get-product/:id')
+  @Public()
+  async getProduct(@Body(':id') id: string) {
+    console.log('Product ID:', id);
+    return this.productService.findProductById(id);
+  }
 }

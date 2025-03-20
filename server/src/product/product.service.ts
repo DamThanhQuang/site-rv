@@ -99,4 +99,37 @@ export class ProductService {
       throw error;
     }
   }
+
+  async findAll(): Promise<Product[]> {
+    try {
+      const products = await this.productModel.find().exec();
+      if (!products || products.length === 0) {
+        throw new NotFoundException('No products found');
+      }
+      return products;
+    } catch (error) {
+      console.error('Find all products error:', error.message);
+      throw new InternalServerErrorException(
+        'Error occurred while fetching products',
+      );
+    }
+  }
+
+  async findProductById(productId: string): Promise<Product> {
+    try {
+      const product = await this.productModel.findById(productId).exec();
+      if (!product) {
+        throw new NotFoundException(`Product not found with ID: ${productId}`);
+      }
+      return product;
+    } catch (error) {
+      console.error('Find product by ID error:', {
+        productId,
+        error: error.message,
+      });
+      throw new InternalServerErrorException(
+        'Error occurred while fetching product',
+      );
+    }
+  }
 }

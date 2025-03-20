@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { FaStar, FaHeart, FaShare, FaMapMarkerAlt } from "react-icons/fa";
+import axios from "@/lib/axios";
 
 interface Rating {
   stars: number;
@@ -23,12 +24,16 @@ interface Review {
 }
 
 interface Product {
-  id: string | string[] | undefined;
-  image: string[]; // Changed to array for multiple images
+  id: number;
+  image: string[]; //
   title: string;
   description: string;
   price: number;
-  location: string;
+  location: {
+    address: string;
+    city: string;
+    country: string;
+  };
   rating: number;
   reviews: Review[];
   host: {
@@ -45,7 +50,10 @@ interface Product {
 export default function ProductDetail() {
   const params = useParams();
   const productId = params.id;
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showAlternateHeader, setShowAlternateHeader] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -70,78 +78,63 @@ export default function ProductDetail() {
   }, [lastScrollY]);
 
   useEffect(() => {
-    const mockProduct = {
-      id: productId,
-      image: [
-        "https://a0.muscache.com/im/pictures/c238f6c3-e3d8-44c4-b529-9fabce2004d4.jpg?im_w=720&im_format=avif&im_origin=fuzzy",
-        "https://a0.muscache.com/im/pictures/hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6MTEzMDQ0ODk%3D/original/db6ca2e7-c532-47e2-82a0-1515d9197d86.jpeg?im_w=720&im_format=avif&im_origin=fuzzy",
-        "https://a0.muscache.com/im/pictures/05ca8f61-a9f7-4ab7-b960-69ffa95a830a.jpg?im_w=720&im_format=avif&im_origin=fuzzy",
-        "https://a0.muscache.com/im/pictures/b30cf8d0-3be7-40e1-85a8-909040398aa8.jpg?im_w=720&im_format=avif&im_origin=fuzzy",
-        "https://a0.muscache.com/im/pictures/hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6MTEzMDQ0ODk%3D/original/e0e5dc7d-7ac0-47bf-9f60-d27458c81b0a.jpeg?im_w=720&im_format=avif&im_origin=fuzzy",
-        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1c/c9/6c/08/caption.jpg",
-        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1c/c9/6c/08/caption.jpg",
-        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1c/c9/6c/08/caption.jpg",
-        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1c/c9/6c/08/caption.jpg",
-        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1c/c9/6c/08/caption.jpg",
-        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1c/c9/6c/08/caption.jpg",
-      ],
-      title: "Luxury Villa with Ocean View",
-      description:
-        "Beautiful villa with stunning ocean views and modern amenities.",
-      price: 299.99,
-      location: "Bali, Indonesia",
-      rating: 4.9,
-      reviews: [
-        {
-          id: 1,
-          rating: 5,
-          title: "Outstanding Experience!!!",
-          comment:
-            "One of the standout features of this place is its intuitive and user-friendly layout. The amenities are excellent, and everything feels natural and well-designed. This is particularly beneficial for anyone looking for a perfect stay.",
-          user: {
-            name: "John Watson",
-            image: "https://pagedone.io/asset/uploads/1704349572.png",
-          },
-          date: "Nov 01, 2023",
-        },
-        {
-          id: 2,
-          rating: 5,
-          title:
-            "This place seamlessly bridges the gap between luxury and comfort!",
-          comment:
-            "This location doesn't disappoint when it comes to the variety and richness of its amenities. From modern facilities to customizable experiences, the place caters to both casual travelers and luxury seekers. The extensive offerings ensure a diverse range of options to bring your perfect vacation to life.",
-          user: {
-            name: "Robert Karmazov",
-            image: "https://pagedone.io/asset/uploads/1704351103.png",
-          },
-          date: "Nov 01, 2023",
-        },
-      ],
-      host: {
-        name: "John Doe",
-        image: "https://flowbite.com/docs/images/people/profile-picture-5.jpg",
-        isSuperhost: true,
-      },
-      amenities: [
-        "WiFi",
-        "Pool",
-        "Kitchen",
-        "Air conditioning",
-        "Beach access",
-      ],
-      ratings: [
-        { stars: 5, count: 989, percentage: 30 },
-        { stars: 4, count: 4500, percentage: 40 },
-        { stars: 3, count: 50, percentage: 20 },
-        { stars: 2, count: 16, percentage: 16 },
-        { stars: 1, count: 8, percentage: 8 },
-      ],
-      totalRatings: 5563,
-      averageRating: 4.3,
+    const fetchProductDetails = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get(`/product/get-product/${productId}`);
+
+        if (response.status < 200 || response.status >= 300) {
+          throw new Error("Failed to fetch product details");
+        }
+        console.log("Product details:", response.data);
+
+        setProduct(response.data);
+        setIsSuccess(true);
+      } catch (error) {
+        console.error("Error fetching product details:", error);
+        setIsError(
+          error instanceof Error ? error.message : "An error occurred"
+        );
+      } finally {
+        setIsLoading(false);
+      }
     };
-    setProduct(mockProduct);
+
+    if (productId) {
+      fetchProductDetails();
+    }
   }, [productId]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center h-96">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-t-rose-500 border-b-rose-500 border-r-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải thông tin...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center h-96">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">
+            ⚠️ Lỗi khi tải dữ liệu
+          </div>
+          <p className="text-gray-600">{isError}</p>
+          <button
+            className="mt-4 px-4 py-2 bg-rose-500 text-white rounded-md hover:bg-rose-600"
+            onClick={() => window.location.reload()}
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return <div>Loading...</div>;
   }

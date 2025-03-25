@@ -2,8 +2,17 @@
 
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { FaStar, FaHeart, FaShare, FaMapMarkerAlt } from "react-icons/fa";
+import {
+  FaStar,
+  FaHeart,
+  FaShare,
+  FaMapMarkerAlt,
+  FaUser,
+} from "react-icons/fa";
 import axios from "@/lib/axios";
+import { DateRange } from "react-date-range";
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
 
 interface Rating {
   stars: number;
@@ -49,14 +58,91 @@ interface Product {
 
 export default function ProductDetail() {
   const params = useParams();
-  const productId = params.id;
-  const [product, setProduct] = useState<Product[]>([]);
+  const productId = params?.id;
+  const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showAlternateHeader, setShowAlternateHeader] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [booking, setBooking] = useState({
+    dateRange: {
+      startDate: new Date(),
+      endDate: new Date(new Date().setDate(new Date().getDate() + 1)),
+      key: "selection",
+    },
+    guests: 1,
+    isSubmitting: false,
+    message: "",
+    error: null as string | null,
+    success: false,
+  });
+
+  // Calculate number of nights and total price
+  const nightCount =
+    booking.dateRange.endDate && booking.dateRange.startDate
+      ? Math.ceil(
+          (booking.dateRange.endDate.getTime() -
+            booking.dateRange.startDate.getTime()) /
+            (1000 * 60 * 60 * 24)
+        )
+      : 1;
+
+  const totalPrice = (product?.price || 0) * nightCount;
+
+  // Handle opening the booking modal
+  const handleReserveClick = () => {
+    setShowBookingModal(true);
+  };
+
+  // Handle booking submission
+  const handleBookNow = async () => {
+    if (!product) return;
+
+    try {
+      setBooking((prev) => ({ ...prev, isSubmitting: true, error: null }));
+
+      const bookingData = {
+        productId: product.id,
+        checkIn: booking.dateRange.startDate,
+        checkOut: booking.dateRange.endDate,
+        guests: booking.guests,
+        totalPrice: totalPrice,
+      };
+
+      const response = await axios.post("/bookings/create", bookingData);
+
+      setBooking((prev) => ({
+        ...prev,
+        isSubmitting: false,
+        success: true,
+        message:
+          "Booking successful! We'll send confirmation details to your email.",
+      }));
+
+      // Close modal after 3 seconds of success
+      setTimeout(() => {
+        setShowBookingModal(false);
+        setBooking((prev) => ({
+          ...prev,
+          success: false,
+          message: "",
+        }));
+      }, 3000);
+    } catch (error) {
+      console.error("Booking error:", error);
+      setBooking((prev) => ({
+        ...prev,
+        isSubmitting: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to complete booking. Please try again.",
+      }));
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -81,14 +167,71 @@ export default function ProductDetail() {
     const fetchProductDetails = async () => {
       try {
         setIsLoading(true);
+        console.log("Fetching product with ID:", productId); // Debug log
+
+        if (!productId) {
+          throw new Error("Product ID is missing");
+        }
+
         const response = await axios.get(`/product/get-product/${productId}`);
+        console.log("API Response:", response);
 
         if (response.status < 200 || response.status >= 300) {
           throw new Error("Failed to fetch product details");
         }
-        console.log("Product details:", response.data);
 
-        setProduct(response.data);
+        const productData = Array.isArray(response.data)
+          ? response.data[0]
+          : response.data;
+        console.log("Product data:", productData);
+
+        // Transform backend data to match your frontend Product interface
+        const transformedProduct = {
+          id: productData._id,
+          image: productData.images || [productData.image || ""],
+          title: productData.name || "Product Name",
+          description: productData.description || "No description available",
+          price: productData.price || 0,
+          location: productData.location || {
+            address: "N/A",
+            city: "N/A",
+            country: "N/A",
+          },
+          rating: productData.averageRating || 0,
+          reviews:
+            productData.reviews?.map((r: any, i: number) => ({
+              id: i,
+              rating: r.rating || 0,
+              title: "Review",
+              comment: r.comment || "",
+              user: {
+                name: r.userId || "Anonymous",
+                image: "https://via.placeholder.com/150",
+              },
+              date: new Date(r.createdAt).toLocaleDateString(),
+            })) || [],
+          host: {
+            name: "Host",
+            image: "https://via.placeholder.com/150",
+            isSuperhost: false,
+          },
+          amenities: productData.amenities || [
+            "WiFi",
+            "Parking",
+            "Air Conditioning",
+          ],
+          ratings: [
+            { stars: 5, count: 0, percentage: 0 },
+            { stars: 4, count: 0, percentage: 0 },
+            { stars: 3, count: 0, percentage: 0 },
+            { stars: 2, count: 0, percentage: 0 },
+            { stars: 1, count: 0, percentage: 0 },
+          ],
+          totalRatings: productData.reviews?.length || 0,
+          averageRating: productData.averageRating || 0,
+        };
+
+        setProduct(transformedProduct);
         setIsSuccess(true);
       } catch (error) {
         console.error("Error fetching product details:", error);
@@ -102,6 +245,9 @@ export default function ProductDetail() {
 
     if (productId) {
       fetchProductDetails();
+    } else {
+      setIsError("No product ID provided");
+      setIsLoading(false);
     }
   }, [productId]);
 
@@ -139,6 +285,111 @@ export default function ProductDetail() {
     return <div>Loading...</div>;
   }
 
+  // Add this JSX for the booking modal
+  const BookingModal = () => (
+    <div
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
+        showBookingModal ? "opacity-100" : "opacity-0 pointer-events-none"
+      } transition-opacity duration-300`}
+    >
+      <div className="bg-white rounded-lg w-full max-w-md mx-4 overflow-hidden">
+        <div className="p-4 border-b">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-semibold">Complete your booking</h3>
+            <button
+              onClick={() => setShowBookingModal(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4">
+          <div className="mb-4">
+            <h4 className="font-medium mb-2">Your trip</h4>
+            <DateRange
+              editableDateInputs={true}
+              onChange={(item) =>
+                setBooking((prev) => ({
+                  ...prev,
+                  dateRange: {
+                    startDate: item.selection.startDate || new Date(),
+                    endDate:
+                      item.selection.endDate ||
+                      new Date(new Date().setDate(new Date().getDate() + 1)),
+                    key: item.selection.key || "selection",
+                  },
+                }))
+              }
+              moveRangeOnFirstSelection={false}
+              ranges={[booking.dateRange]}
+              minDate={new Date()}
+              className="w-full border rounded-lg"
+            />
+          </div>
+
+          <div className="mb-6">
+            <h4 className="font-medium mb-2">Guests</h4>
+            <div className="flex items-center border rounded-lg p-2">
+              <FaUser className="text-gray-500 mr-2" />
+              <select
+                value={booking.guests}
+                onChange={(e) =>
+                  setBooking((prev) => ({
+                    ...prev,
+                    guests: parseInt(e.target.value),
+                  }))
+                }
+                className="w-full p-2 outline-none"
+              >
+                {[...Array(10)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1} guest{i !== 0 ? "s" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="border-t pt-4 mb-4">
+            <div className="flex justify-between mb-2">
+              <span>
+                ${product?.price || 0} × {nightCount} night
+                {nightCount !== 1 ? "s" : ""}
+              </span>
+              <span>${totalPrice}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-lg">
+              <span>Total</span>
+              <span>${totalPrice}</span>
+            </div>
+          </div>
+
+          {booking.error && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+              {booking.error}
+            </div>
+          )}
+
+          {booking.success && (
+            <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">
+              {booking.message}
+            </div>
+          )}
+
+          <button
+            onClick={handleBookNow}
+            disabled={booking.isSubmitting}
+            className="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold hover:bg-rose-700 transition disabled:bg-rose-300"
+          >
+            {booking.isSubmitting ? "Processing..." : "Book now"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* Main Header */}
@@ -157,7 +408,7 @@ export default function ProductDetail() {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-medium">
-              ${product.price}{" "}
+              ${product.price || 0}{" "}
               <span className="text-sm font-normal">night</span>
             </h2>
             <div className="flex items-center">
@@ -165,8 +416,11 @@ export default function ProductDetail() {
               <span className="ml-1">{product.rating}</span>
             </div>
           </div>
-          <button className="bg-rose-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-rose-700 transition">
-            Reserve
+          <button
+            className="bg-rose-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-rose-700 transition"
+            onClick={handleReserveClick}
+          >
+            Đặt phòng
           </button>
         </div>
       </header>
@@ -191,7 +445,7 @@ export default function ProductDetail() {
               <span className="hidden sm:block mx-1">·</span>
               <div className="flex items-center">
                 <FaMapMarkerAlt className="mr-1" />
-                <span>{product.location}</span>
+                <span>{`${product.location.address}, ${product.location.city}, ${product.location.country}`}</span>
               </div>
             </div>
             <div className="flex gap-4 w-full sm:w-auto">
@@ -302,7 +556,7 @@ export default function ProductDetail() {
             <div className="sticky top-24 bg-white p-6 rounded-xl border shadow-xl">
               <div className="flex justify-between items-center mb-4">
                 <div className="text-xl md:text-2xl font-semibold">
-                  ${product.price}
+                  ${product.price || 0}
                   <span className="text-base font-normal">night</span>
                 </div>
                 <div className="flex items-center">
@@ -310,7 +564,10 @@ export default function ProductDetail() {
                   <span className="ml-1">{product.rating}</span>
                 </div>
               </div>
-              <button className="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold hover:bg-rose-700 transition">
+              <button
+                className="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold hover:bg-rose-700 transition"
+                onClick={handleReserveClick}
+              >
                 Reserve
               </button>
             </div>
@@ -415,7 +672,7 @@ export default function ProductDetail() {
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <p className="text-lg font-semibold mb-1">
-                    ${product.price}
+                    ${product.price || 0}
                     <span className="text-sm font-normal text-gray-600">
                       /night
                     </span>
@@ -430,7 +687,10 @@ export default function ProductDetail() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
-                  <button className="bg-rose-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-rose-700 transition">
+                  <button
+                    className="bg-rose-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-rose-700 transition"
+                    onClick={handleReserveClick}
+                  >
                     Reserve
                   </button>
                 </div>
@@ -449,6 +709,9 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      {/* Render the booking modal */}
+      <BookingModal />
     </>
   );
 }

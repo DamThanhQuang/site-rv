@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Param } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { AddReviewDto } from './dto/add-review.dto';
@@ -29,7 +29,7 @@ export class ProductController {
 
   @Get('get-product/:id')
   @Public()
-  async getProduct(@Body(':id') id: string) {
+  async getProduct(@Param('id') id: string) {
     console.log('Product ID:', id);
     return this.productService.findProductById(id);
   }

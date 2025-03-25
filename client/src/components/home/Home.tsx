@@ -38,6 +38,7 @@ export default function Home() {
         }
 
         const data = response.data;
+        // Debug logs
         console.log("Fetched products:", data);
         console.log("Dữ liệu API nhận được:", data);
         console.log("Kiểu dữ liệu:", typeof data);
@@ -52,25 +53,28 @@ export default function Home() {
           type: item.type,
           date: item.date,
           price: item.price,
-          images: item.images.map((img: string) => img), // Chuyển đổi thành mảng URL
-          isLiked: item.isLiked || false, // Đảm bảo có thuộc tính isLiked
+          images: item.images.map((img: string) => img),
+          isLiked: item.isLiked || false,
         }));
 
-        if (Array.isArray(data)) {
-          console.log("Số lượng sản phẩm:", data.length);
-          data.forEach((item, index) => {
+        // Use formattedData instead of data
+        setListings(formattedData);
+
+        // Initialize favorites from formattedData
+        const favoritesMap: Record<string, boolean> = {};
+        formattedData.forEach((item: Listing) => {
+          favoritesMap[item.id] = item.isLiked;
+        });
+        setIsFavorite(favoritesMap);
+
+        // Debug logs for formattedData
+        if (Array.isArray(formattedData)) {
+          console.log("Số lượng sản phẩm:", formattedData.length);
+          formattedData.forEach((item, index) => {
             console.log(`Sản phẩm ${index}:`, item);
             console.log(`ID của sản phẩm ${index}:`, item.id);
           });
         }
-        setListings(data);
-
-        // Initialize favorites from API data
-        const favoritesMap: Record<string, boolean> = {};
-        data.forEach((item: Listing) => {
-          favoritesMap[item.id] = item.isLiked;
-        });
-        setIsFavorite(favoritesMap);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
         console.error("Error fetching products:", err);

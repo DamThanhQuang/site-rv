@@ -117,16 +117,33 @@ export class ProductService {
 
   async findProductById(productId: string): Promise<Product> {
     try {
-      const product = await this.productModel.findById(productId).exec();
+      // Validate the ID format first before querying
+      if (!productId || !Types.ObjectId.isValid(productId)) {
+        throw new NotFoundException(`Invalid product ID format: ${productId}`);
+      }
+
+      const product = await this.productModel
+        .findById(new Types.ObjectId(productId))
+        .exec();
+
+      console.log('Product search result:', product);
+
       if (!product) {
         throw new NotFoundException(`Product not found with ID: ${productId}`);
       }
+
       return product;
     } catch (error) {
       console.error('Find product by ID error:', {
         productId,
         error: error.message,
+        stack: error.stack, // Include stack trace for debugging
       });
+
+      if (error instanceof NotFoundException) {
+        throw error; // Re-throw NotFoundException as is
+      }
+
       throw new InternalServerErrorException(
         'Error occurred while fetching product',
       );

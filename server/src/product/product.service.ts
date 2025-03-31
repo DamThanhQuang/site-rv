@@ -2,19 +2,23 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
+  HttpException,
 } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { Model, ObjectId, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { AddReviewDto } from './dto/add-review.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { Product, ProductDocument } from './schemas/product.schemas';
 import { Business, BusinessDocument } from '@/business/schemas/business.schema';
+import { ErrorService } from '@/common/services/error.service';
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Business.name) private businessModel: Model<BusinessDocument>,
+    private errorService: ErrorService,
   ) {}
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
@@ -104,14 +108,14 @@ export class ProductService {
     try {
       const products = await this.productModel.find().exec();
       if (!products || products.length === 0) {
-        throw new NotFoundException('No products found');
+        throw this.errorService.notFound('Product');
       }
       return products;
     } catch (error) {
-      console.error('Find all products error:', error.message);
-      throw new InternalServerErrorException(
-        'Error occurred while fetching products',
-      );
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw this.errorService.serverError('Error fetching products', error);
     }
   }
 
@@ -119,7 +123,10 @@ export class ProductService {
     try {
       // Validate the ID format first before querying
       if (!productId || !Types.ObjectId.isValid(productId)) {
-        throw new NotFoundException(`Invalid product ID format: ${productId}`);
+        throw this.errorService.badRequest(
+          'Invalid product ID format',
+          'INVALID_PRODUCT_ID',
+        );
       }
 
       const product = await this.productModel
@@ -129,24 +136,41 @@ export class ProductService {
       console.log('Product search result:', product);
 
       if (!product) {
-        throw new NotFoundException(`Product not found with ID: ${productId}`);
+        throw this.errorService.notFound('Product', productId);
       }
 
       return product;
     } catch (error) {
-      console.error('Find product by ID error:', {
-        productId,
-        error: error.message,
-        stack: error.stack, // Include stack trace for debugging
-      });
-
-      if (error instanceof NotFoundException) {
-        throw error; // Re-throw NotFoundException as is
+      if (error instanceof HttpException) {
+        throw error;
       }
-
-      throw new InternalServerErrorException(
-        'Error occurred while fetching product',
-      );
+      throw this.errorService.serverError('Error fetching product', {
+        productId,
+        error,
+      });
     }
+  }
+
+  async findOne(id: string) {
+    return this.productModel.findById(id);
+  }
+  async findById(id: string) {
+    return this.productModel.findById(id);
+  }
+
+  async update(id: string, updateProductDto: UpdateProductDto, userId: string) {
+    return this.productModel.findOneAndUpdate(
+      { _id: id, userId },
+      { $set: updateProductDto },
+      { new: true },
+    );
+  }
+
+  async delete(id: string, userId: string) {
+    return this.productModel.findOneAndDelete({ _id: id, userId });
+  }
+
+  async findByUser(userId: string) {
+    return this.productModel.find({ userId }).sort({ createdAt: -1 }).exec();
   }
 }

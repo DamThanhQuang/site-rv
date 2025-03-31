@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - '3001:3001'
+    volumes:
+      - ./server:/app
+      - /app/node_modules # Volume này có thể đang gây vấn đề
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/site_review
+    depends_on:
+      - mongo
+    networks:
+      - backend-network
+
+  mongo:
+    image: mongo:6
+    ports:
+      - '27017:27017'
+    environment:
+      - MONGO_INITDB_DATABASE=site_review
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - backend-network
+
+networks:
+  backend-network:
+    driver: bridge
+
+volumes:
+  mongo-data:

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FaCheck, FaCalendarAlt, FaClipboardList } from "react-icons/fa";
@@ -13,6 +13,7 @@ export default function Receipt() {
   // Các state liên quan đến submit
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const router = useRouter();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -222,6 +223,11 @@ export default function Receipt() {
     productData.amenities && productData.amenities.length > 0,
   ].filter(Boolean).length;
 
+  // Add toggle function for preview modal
+  const togglePreview = () => {
+    setIsPreviewOpen(!isPreviewOpen);
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 flex flex-col">
       <motion.div
@@ -393,6 +399,7 @@ export default function Receipt() {
                   className="flex items-center px-4 py-2 bg-white border border-black text-black rounded-lg hover:bg-gray-50"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={togglePreview}
                 >
                   <MdPreview className="mr-2" />
                   Hiển thị bản xem trước
@@ -560,6 +567,168 @@ export default function Receipt() {
           </motion.div>
         </motion.div>
       )}
+
+      {/* Preview Modal */}
+      <AnimatePresence>
+        {isPreviewOpen && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              className="fixed inset-0 bg-black bg-opacity-70 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={togglePreview}
+            />
+
+            {/* Modal */}
+            <motion.div
+              className="fixed inset-0 z-50 overflow-y-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+                <motion.div
+                  className="relative bg-white rounded-lg max-w-3xl mx-auto shadow-xl overflow-hidden"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ type: "spring", damping: 20 }}
+                >
+                  {/* Header */}
+                  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-white sticky top-0 z-10">
+                    <h2 className="text-xl font-semibold">
+                      Xem trước: {productData.title}
+                    </h2>
+                    <button
+                      onClick={togglePreview}
+                      className="text-gray-600 hover:text-gray-900 focus:outline-none"
+                    >
+                      <svg
+                        className="h-6 w-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Content */}
+                  <div className="px-6 py-4 max-h-[80vh] overflow-y-auto">
+                    {/* Image gallery */}
+                    <div className="mb-6">
+                      {productData.images && productData.images.length > 0 ? (
+                        <div className="relative h-64 md:h-80 overflow-hidden rounded-lg">
+                          <Image
+                            src={productData.images[0]}
+                            alt={productData.title}
+                            fill
+                            className="object-cover"
+                          />
+                          {productData.images.length > 1 && (
+                            <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-md p-2">
+                              <span className="text-sm font-medium">
+                                +{productData.images.length - 1} ảnh khác
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-500">Chưa có ảnh</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Property details */}
+                    <h1 className="text-2xl font-bold mb-2">
+                      {productData.title}
+                    </h1>
+                    <p className="text-gray-600 mb-4">
+                      {productData.location.address},{" "}
+                      {productData.location.city},{" "}
+                      {productData.location.country}
+                    </p>
+
+                    <div className="flex flex-wrap gap-3 mb-4 text-sm">
+                      <span className="bg-gray-100 px-3 py-1 rounded-full">
+                        {productData.propertyType}
+                      </span>
+                      <span className="bg-gray-100 px-3 py-1 rounded-full">
+                        {productData.bedrooms} phòng ngủ
+                      </span>
+                      <span className="bg-gray-100 px-3 py-1 rounded-full">
+                        {productData.beds} giường
+                      </span>
+                      <span className="bg-gray-100 px-3 py-1 rounded-full">
+                        {productData.bathrooms} phòng tắm
+                      </span>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-4 mb-6">
+                      <div className="flex items-baseline mb-4">
+                        <span className="text-2xl font-bold">
+                          ₫
+                          {formatCurrency(
+                            productData.discountedPrice || productData.price
+                          )}
+                        </span>
+                        <span className="text-gray-600 ml-1">/đêm</span>
+                        {productData.discountedPrice < productData.price &&
+                          productData.discountedPrice > 0 && (
+                            <span className="text-gray-500 text-sm ml-2 line-through">
+                              ₫{formatCurrency(productData.price)}
+                            </span>
+                          )}
+                      </div>
+                    </div>
+
+                    {/* Amenities */}
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold mb-3">Tiện nghi</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {productData.amenities.map((amenity, index) => (
+                          <div key={index} className="flex items-center">
+                            <FaCheck className="text-green-500 mr-2" />
+                            <span>{amenity}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold mb-2">Mô tả</h3>
+                      <p className="text-gray-700">
+                        {localStorage.getItem("description") ||
+                          "Mô tả sẽ được cập nhật sau"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
+                    <button
+                      onClick={togglePreview}
+                      className="w-full bg-rose-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-rose-600 transition"
+                    >
+                      Đóng xem trước
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Nút điều hướng */}
       <motion.div

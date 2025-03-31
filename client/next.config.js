@@ -8,6 +8,16 @@ const nextConfig = {
       'undefined.s3.amazonaws.com'
     ],
   },
+
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/home',
+        permanent: true,
+      }
+    ]
+  }
 };
 
 module.exports = nextConfig;

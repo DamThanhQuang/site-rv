@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Post } from '@nestjs/common';
 import * as AWS from 'aws-sdk';
 
 // Tạo Service trong NestJS để tạo Pre-signed URL

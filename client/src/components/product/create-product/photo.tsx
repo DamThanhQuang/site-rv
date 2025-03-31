@@ -127,36 +127,47 @@ export default function Photo() {
     router.push("/create/amenity");
   };
 
-  // Hàm upload ảnh lên server (nếu cần, hiện tại đang mô phỏng)
+  // Hàm upload ảnh lên S3 thông qua server API
   const uploadImages = async () => {
     if (photos.length === 0) return [];
+
     const token = localStorage.getItem("accessToken");
     if (!token) {
       throw new Error("Bạn cần đăng nhập để tải ảnh lên");
     }
+
+    setIsLoading(true);
     const formData = new FormData();
     photos.forEach((photo) => {
       formData.append("files", photo);
     });
-    const response = await axios.post(
-      "http://localhost:3001/upload",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setProgress(percentCompleted);
-          }
-        },
-      }
-    );
-    return response.data;
+
+    try {
+      const response = await axios.post(
+        "http://localhost:3001/upload/s3",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setProgress(percentCompleted);
+            }
+          },
+        }
+      );
+
+      // Trả về mảng các URL của ảnh trên S3
+      return response.data.urls || [];
+    } catch (error) {
+      console.error("Lỗi khi tải ảnh lên S3:", error);
+      throw error;
+    }
   };
 
   // Xử lý khi người dùng nhấn "Tiếp theo"
@@ -165,20 +176,16 @@ export default function Photo() {
       setError("Bạn cần ít nhất 5 ảnh để tiếp tục");
       return;
     }
+
     try {
       setIsLoading(true);
       setError(null);
       let imageUrls = [...uploadedUrls];
 
-      // Nếu có ảnh mới, upload (ở đây đang mô phỏng)
+      // Nếu có ảnh mới, upload lên S3
       if (photos.length > 0) {
-        // Nếu có API upload thực tế, bạn có thể gọi uploadImages()
-        // const uploadedImageUrls = await uploadImages();
-
-        // Mô phỏng upload thành công (với ảnh được chuyển Base64)
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        const mockUploadedUrls = photos.map((photo) => photo.preview);
-        imageUrls = [...imageUrls, ...mockUploadedUrls];
+        const uploadedImageUrls = await uploadImages();
+        imageUrls = [...imageUrls, ...uploadedImageUrls];
       }
 
       // Lưu mảng URLs vào localStorage
@@ -192,7 +199,9 @@ export default function Photo() {
       router.push("/create/title");
     } catch (err: any) {
       console.error("Lỗi khi tải ảnh:", err);
-      setError(err.response?.data?.message || "Có lỗi xảy ra khi tải ảnh lên");
+      setError(
+        err.response?.data?.message || "Có lỗi xảy ra khi tải ảnh lên S3"
+      );
     } finally {
       setIsLoading(false);
       setProgress(0);

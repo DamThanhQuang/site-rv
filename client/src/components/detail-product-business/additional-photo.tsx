@@ -6,8 +6,6 @@ import axios from "@/lib/axios";
 import { isAxiosError } from "axios";
 import { toast } from "react-hot-toast";
 import { useParams } from "next/navigation";
-import { projectTraceSource } from "next/dist/build/swc/generated-native";
-import { title } from "process";
 
 interface AdditionalPhotoProps {
   onBack: () => void;

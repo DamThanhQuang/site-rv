@@ -11,6 +11,8 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { ProductModule } from './product/product.module';
 import { BusinessModule } from './business/business.module';
 import { S3Module } from './aws/s3.module';
+import { ErrorService } from './common/services/error.service';
+import { BookingModule } from './booking/booking.module';
 
 @Module({
   imports: [
@@ -48,6 +50,7 @@ import { S3Module } from './aws/s3.module';
     }),
     ProductModule,
     BusinessModule,
+    BookingModule,
   ],
   controllers: [AppController, ExampleController],
   providers: [
@@ -56,6 +59,8 @@ import { S3Module } from './aws/s3.module';
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+    ErrorService,
   ],
+  exports: [ErrorService],
 })
 export class AppModule {}

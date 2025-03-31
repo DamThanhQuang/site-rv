@@ -13,10 +13,13 @@ export function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith("/business") && role !== "business") {
     return NextResponse.redirect(new URL("/not-authorized", req.url));
   }
+  if (req.nextUrl.pathname === "/") {
+    return NextResponse.redirect(new URL("/home", req.url));
+  }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/business/:path*"],
+  matcher: ["/dashboard/:path*", "/business/:path*", "/"],
 };

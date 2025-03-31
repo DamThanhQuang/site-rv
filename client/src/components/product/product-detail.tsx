@@ -13,6 +13,8 @@ import axios from "@/lib/axios";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import { log } from "console";
+import Cookies from "js-cookie";
 
 interface Rating {
   stars: number;
@@ -101,6 +103,9 @@ export default function ProductDetail() {
   const handleBookNow = async () => {
     if (!product) return;
 
+    const token = Cookies.get("token");
+    console.log(token);
+
     try {
       setBooking((prev) => ({ ...prev, isSubmitting: true, error: null }));
 
@@ -112,7 +117,12 @@ export default function ProductDetail() {
         totalPrice: totalPrice,
       };
 
-      const response = await axios.post("/bookings/create", bookingData);
+      const response = await axios.post("/bookings/create", bookingData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      console.log(response);
 
       setBooking((prev) => ({
         ...prev,
@@ -355,14 +365,14 @@ export default function ProductDetail() {
           <div className="border-t pt-4 mb-4">
             <div className="flex justify-between mb-2">
               <span>
-                ${product?.price || 0} × {nightCount} night
+                ₫{product?.price || 0} × {nightCount} night
                 {nightCount !== 1 ? "s" : ""}
               </span>
-              <span>${totalPrice}</span>
+              <span>₫{totalPrice}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span>${totalPrice}</span>
+              <span>₫{totalPrice}</span>
             </div>
           </div>
 
@@ -408,7 +418,7 @@ export default function ProductDetail() {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-medium">
-              ${product.price || 0}{" "}
+              ₫{product.price || 0}{" "}
               <span className="text-sm font-normal">night</span>
             </h2>
             <div className="flex items-center">
@@ -556,8 +566,8 @@ export default function ProductDetail() {
             <div className="sticky top-24 bg-white p-6 rounded-xl border shadow-xl">
               <div className="flex justify-between items-center mb-4">
                 <div className="text-xl md:text-2xl font-semibold">
-                  ${product.price || 0}
-                  <span className="text-base font-normal">night</span>
+                  ₫{product.price || 0}
+                  <span className="text-base font-normal">/đêm</span>
                 </div>
                 <div className="flex items-center">
                   <FaStar className="text-yellow-400" />
@@ -568,7 +578,7 @@ export default function ProductDetail() {
                 className="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold hover:bg-rose-700 transition"
                 onClick={handleReserveClick}
               >
-                Reserve
+                Đặt phòng
               </button>
             </div>
           </div>
@@ -672,7 +682,7 @@ export default function ProductDetail() {
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <p className="text-lg font-semibold mb-1">
-                    ${product.price || 0}
+                    ₫{product.price || 0}
                     <span className="text-sm font-normal text-gray-600">
                       /night
                     </span>
@@ -691,18 +701,28 @@ export default function ProductDetail() {
                     className="bg-rose-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-rose-700 transition"
                     onClick={handleReserveClick}
                   >
-                    Reserve
+                    Book now
                   </button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div className="border rounded-lg p-2">
+                <div
+                  className="border rounded-lg p-2 cursor-pointer"
+                  onClick={handleReserveClick}
+                >
                   <p className="text-xs text-gray-500">Check-in</p>
-                  <p className="text-sm font-medium">Add date</p>
+                  <p className="text-sm font-medium">
+                    {booking.dateRange.startDate.toLocaleDateString()}
+                  </p>
                 </div>
-                <div className="border rounded-lg p-2">
+                <div
+                  className="border rounded-lg p-2 cursor-pointer"
+                  onClick={handleReserveClick}
+                >
                   <p className="text-xs text-gray-500">Check-out</p>
-                  <p className="text-sm font-medium">Add date</p>
+                  <p className="text-sm font-medium">
+                    {booking.dateRange.endDate.toLocaleDateString()}
+                  </p>
                 </div>
               </div>
             </div>

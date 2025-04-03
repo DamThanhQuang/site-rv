@@ -18,7 +18,7 @@ export default function HeroSection() {
       {/* Hero image */}
       <div className="relative h-[500px] w-full">
         <Image
-          src="/images/hero-travel.jpg" // Add this image to your public folder
+          src="/0123.jpg" // Add this image to your public folder
           alt="Beautiful vacation destination"
           fill
           priority
